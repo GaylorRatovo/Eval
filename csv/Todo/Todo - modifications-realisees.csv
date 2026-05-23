@@ -1,0 +1,8 @@
+Ligne,Categorie,Module,Page,Description tache,Type,Qui,Estimation,Temps passe,Reste a faire,Avancement
+1,BackOffice,Dashboard,/backOffice/dashboard,Ameliorer layout dashboard (structure, titres, cartes) pour rendu plus pro,Affichage,ETU003361,25,20,0,100%
+2,BackOffice,Dashboard,/backOffice/dashboard,Renforcer les couleurs des cards (payees/livrees, paniers, global, stock) + fonds teintes,Affichage,ETU003361,25,20,0,100%
+3,BackOffice,Dashboard,/backOffice/dashboard,Ajouter styles CSS dashboard (cartes, badges, summaries),Affichage,ETU003361,20,15,0,100%
+4,BackOffice,Dashboard,/backOffice/dashboard,Documenter service dashboard (commentaires code) + doc explicative,Global,ETU003361,25,20,0,100%
+5,BackOffice,Import,/backOffice/import,Reduire les logs par ligne dans importFile3 (commenter logs non essentiels),Performance,ETU003361,15,10,0,100%
+6,Global,QA,global,Tests visuels rapides du dashboard apres modifs,Interaction,ETU003361,15,10,0,100%
+7,Global,QA,global,Verification rapide import (logs essentiels uniquement),Interaction,ETU003361,10,5,0,100%

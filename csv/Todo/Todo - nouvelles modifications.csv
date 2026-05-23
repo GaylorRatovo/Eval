@@ -1,0 +1,13 @@
+Ligne,Catégorie,Module,Page,Description tâche,Type,Qui,Estimation,Temps passé,Reste à faire,Avancement
+1,Global,Analyse,/backOffice/orders,Recenser les id_order_state existants (panier, paiement effectue, annule, livre) via order_states pour confirmer les IDs,Global,ETU003361,20,0,20,0%
+2,BackOffice,Orders,/backOffice/orders,Creer un endpoint manuel (order_history) pour changer l etat d une commande et mettre a jour current_state (livre=4, annule=6),Metier,ETU003361,45,0,45,0%
+3,BackOffice,Orders,/backOffice/orders,Ajouter un service API updateOrderStateManual (POST order_histories + patch date) reutilisable depuis l UI,Metier,ETU003361,35,0,35,0%
+4,BackOffice,Orders,/backOffice/orders,Ajouter boutons Annuler et Livrer dans la liste commandes avec desactivation selon etat et spinner,Affichage,ETU003361,30,0,30,0%
+5,BackOffice,Orders,/backOffice/orders,Mettre a jour labels et badges d etat (panier, paiement effectue, annule, livre) et la map d etats,Affichage,ETU003361,25,0,25,0%
+6,BackOffice,Orders,/backOffice/orders,Ajouter confirmation utilisateur et messages de retour pour annulation/livraison,Interaction,ETU003361,20,0,20,0%
+7,BackOffice,Stats,/backOffice/stats,Creer la nouvelle page Statistiques et la route + lien menu backOffice,Global,ETU003361,30,0,30,0%
+8,BackOffice,Stats,/backOffice/stats,Creer un service de stats ventes/achats/profit par categorie (orders + order_details + products + categories),Metier,ETU003361,60,0,60,0%
+9,BackOffice,Stats,/backOffice/stats,Calculer les montants globaux ventes/achats et benefice par categorie,Metier,ETU003361,40,0,40,0%
+10,BackOffice,Stats,/backOffice/stats,Construire le tableau categorie avec Qté physique/Qté reserve/Qté disponible (agregation stock_availables),Metier,ETU003361,45,0,45,0%
+11,BackOffice,Stats,/backOffice/stats,Afficher la categorie Habillement dans le tableau et prevoir le filtre categorie si besoin,Affichage,ETU003361,25,0,25,0%
+12,Global,QA,global,Tester changement d etat (annule/livre) et la page statistiques avec donnees reelles,Interaction,ETU003361,40,0,40,0%

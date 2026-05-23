@@ -1,0 +1,100 @@
+Ligne,Catégorie,Module,Page,Description tâche,Type,Qui,Estimation,Temps passé,Reste à faire,Avancement
+1,Global,Setup,projet,Init projet Vite (React),Global,ETU003361,35,50,0,100%
+2,Global,Setup,projet,Config de base + premier lancement,Global,ETU003361,25,50,0,100%
+3,Global,Routing,/backoffice/*,Routes BackOffice + layout commun,Global,ETU003361,25,35,0,100%
+4,BackOffice,Login,/backoffice/login,UI login (email + mot de passe),Affichage,ETU003361,15,15,0,100%
+5,BackOffice,Login,/backoffice/login,Finition UI login (styles + labels),Affichage,ETU003361,15,15,0,100%
+6,BackOffice,Login,/backoffice/login,Mettre le formulaire en page par defaut,Interaction,ETU003361,10,10,0,100%
+7,BackOffice,Login,/backoffice/login,Verifier que le login marche,Interaction,ETU003361,30,40,0,100%
+8,BackOffice,AuthGuard,/backoffice/*,Guard back office (blocage routes),Global,ETU003361,25,25,0,100%
+9,BackOffice,AuthGuard,/backoffice/*,Redirection si non connecte,Global,ETU003361,15,15,0,100%
+10,BackOffice,Orders,/backoffice/orders,Page commandes (liste),Affichage,ETU003361,35,45,0,100%
+11,BackOffice,Orders,/backoffice/orders,UI etat commande + actions,Affichage,ETU003361,25,35,0,100%
+12,BackOffice,Orders,/backoffice/orders,Action paiement effectue,Interaction,ETU003361,30,40,0,100%
+13,BackOffice,Orders,/backoffice/orders,Action annule,Interaction,ETU003361,10,30,0,100%
+14,BackOffice,Orders,/backoffice/orders,Test page commandes + changements etat,Interaction,ETU003361,45,60,0,100%
+15,BackOffice,Reset,/backoffice/reset,Page bouton reset des donnees,Affichage,ETU003361,35,45,0,100%
+16,BackOffice,Reset,/backoffice/reset,Logique reset (appel service),Interaction,ETU003361,35,45,0,100%
+17,BackOffice,Reset,/backoffice/reset,Message de retour reset,Interaction,ETU003361,15,20,0,100%
+18,Global,Routing,/frontoffice/*,Routes FrontOffice,Global,ETU003361,35,45,0,100%
+19,FrontOffice,Home,/,Page accueil (layout),Affichage,ETU003361,35,45,0,100%
+20,FrontOffice,Products,/,Liste produits sur accueil,Affichage,ETU003361,25,35,0,100%
+21,FrontOffice,ProductDetail,/product/:id,Fiche produit (layout),Affichage,ETU003361,35,45,0,100%
+22,FrontOffice,ProductDetail,/product/:id,Bloc prix + bouton achat,Affichage,ETU003361,15,20,0,100%
+23,FrontOffice,Cart,/cart,Panier: ajout et suppression,Metier,ETU003361,45,55,0,100%
+24,FrontOffice,Cart,/cart,Panier: calcul total + affichage,Metier,ETU003361,30,40,0,100%
+25,FrontOffice,Checkout,/checkout,Validation commande (etape),Metier,ETU003361,45,60,0,100%
+26,FrontOffice,Checkout,/checkout,Resume commande + message,Metier,ETU003361,30,40,0,100%
+27,FrontOffice,Checkout,/checkout,Paiement a la livraison uniquement,Interaction,ETU003361,20,35,0,100%
+28,FrontOffice,Checkout,/checkout,Pas de frais de livraison,Metier,ETU003361,15,15,0,100%
+29,FrontOffice,Orders,/my-orders,Page mes commandes (liste),Affichage,ETU003361,35,45,0,100%
+30,FrontOffice,Orders,/my-orders,Affichage etat commande,Affichage,ETU003361,15,20,0,100%
+31,Global,Reset,/backoffice/reset,Corrections reset (ajustements),Interaction,ETU003361,30,40,0,100%
+32,BackOffice,Import,/backoffice/import,UI import fichiers,Affichage,ETU003361,20,35,0,100%
+33,BackOffice,Import,/backoffice/import,Validation basique import,Interaction,ETU003361,20,25,0,100%
+34,BackOffice,ImportCSV,/backoffice/import,Import CSV produits - pt1 parsing et mapping colonnes,Metier,ETU003361,50,65,0,100%
+35,BackOffice,ImportCSV,/backoffice/import,Import CSV produits - pt2 insertion en base,Metier,ETU003361,40,55,0,100%
+36,BackOffice,ImportCSV,/backoffice/import,Import CSV clients - parsing et insertion,Metier,ETU003361,50,65,0,100%
+37,BackOffice,ImportCSV,/backoffice/import,Import CSV commandes - parsing et insertion,Metier,ETU003361,50,65,0,100%
+38,BackOffice,ImportCSV,/backoffice/import,Gerer CSV modifie (donnees corrigees 11/05),Metier,ETU003361,50,65,0,100%
+39,BackOffice,ImportImages,/backoffice/import,Upload ZIP images + extraction,Metier,ETU003361,50,65,0,100%
+40,BackOffice,ImportImages,/backoffice/import,Traitement images + log erreurs,Metier,ETU003361,40,50,0,100%
+41,Global,Tests,/backoffice/*,"Tests back (login, commandes, import)",Interaction,ETU003361,35,45,0,100%
+42,Global,Tests,/frontoffice/*,Tests front (parcours achat),Interaction,ETU003361,35,45,0,100%
+43,Global,QA,global,Corrections finales apres tests,Interaction,ETU003361,55,75,0,100%
+44,Global,Routing,/,Remplacer page accueil par selection utilisateur FrontOffice,Interaction,ETU003361,35,45,0,100%
+45,FrontOffice,Auth,/frontOffice/select-user,Afficher la liste des utilisateurs existants,Affichage,ETU003361,30,45,0,100%
+46,FrontOffice,Auth,/frontOffice/select-user,Ajouter l option utilisateur anonyme,Interaction,ETU003361,35,45,0,100%
+47,FrontOffice,Auth,/frontOffice/login,Connexion avec l utilisateur choisi (appel API + token),Interaction,ETU003361,40,50,0,100%
+48,FrontOffice,Routing,/frontOffice/*,Verifier les redirections apres selection utilisateur,Interaction,ETU003361,30,40,0,100%
+49,FrontOffice,Products,/frontOffice,Afficher la liste des produits sur la page d accueil,Affichage,ETU003361,50,65,0,100%
+50,FrontOffice,Products,/frontOffice,Ajouter les marques sur les produits (affichage card),Affichage,ETU003361,35,45,0,100%
+51,FrontOffice,Products,/frontOffice,Ajouter badge HOT pour produits sortis il y a 1 jour,Metier,ETU003361,35,45,0,100%
+52,FrontOffice,Products,/frontOffice,Ajouter badge NEW pour produits sortis il y a 1 semaine,Metier,ETU003361,35,45,0,100%
+53,FrontOffice,Products,/frontOffice,Recherche multicritere par nom (filtrage liste),Interaction,ETU003361,40,55,0,100%
+54,FrontOffice,Products,/frontOffice,Recherche multicritere par categorie,Interaction,ETU003361,40,50,0,100%
+55,FrontOffice,Products,/frontOffice,Recherche multicritere par intervalle de prix (min/max),Metier,ETU003361,50,65,0,100%
+56,FrontOffice,ProductDetail,/frontOffice/products/:productId,"Afficher marque, disponibilite et badges sur fiche produit",Affichage,ETU003361,20,20,0,100%
+57,FrontOffice,Cart,/frontOffice/cart,Gerer le panier en mode utilisateur anonyme,Metier,ETU003361,40,55,0,100%
+58,FrontOffice,Cart,/frontOffice/cart,Verifier comportement panier avant creation de commande,Metier,ETU003361,35,45,0,100%
+59,BackOffice,Orders,/backOffice,Ajouter les etats de commandes utilises par l import,Metier,ETU003361,40,55,0,100%
+60,BackOffice,Orders,/backOffice,Etat panier (pas encore dans une commande),Metier,ETU003361,35,45,0,100%
+61,BackOffice,Orders,/backOffice,Etat paiement effectue,Metier,ETU003361,30,40,0,100%
+62,BackOffice,Orders,/backOffice,Etat annule,Metier,ETU003361,30,40,0,100%
+63,BackOffice,Dashboard,/backOffice/dashboard,Dashboard: tableau commandes par jour + nombre + montant total,Affichage,ETU003361,50,70,0,100%
+64,BackOffice,Dashboard,/backOffice/dashboard,Dashboard: logique agregation donnees par jour,Metier,ETU003361,50,65,0,100%
+65,BackOffice,Dashboard,/backOffice/dashboard,Dashboard: afficher le total general,Affichage,ETU003361,30,40,0,100%
+66,BackOffice,Import,/backOffice/import,Adapter import declinaisons - pt1 analyse et comprehension,Metier,ETU003361,50,50,0,100%
+67,BackOffice,Import,/backOffice/import,Adapter import declinaisons - pt2 implementation,Metier,ETU003361,50,65,0,100%
+68,BackOffice,Import,/backOffice/import,Valider le nouveau data import modifie,Interaction,ETU003361,35,45,0,100%
+69,Global,QA,global,Tests de bout en bout FrontOffice (parcours complet),Interaction,ETU003361,50,65,0,100%
+70,Global,QA,global,Tests de bout en bout BackOffice (dashboard + import),Interaction,ETU003361,50,65,0,100%
+71,FrontOffice,ProductDetail,/frontOffice/products/:productId,Afficher quantite en stock disponible sur la fiche produit,Affichage,ETU003361,30,40,0,100%
+72,FrontOffice,ProductDetail,/frontOffice/products/:productId,Desactiver ajout panier si rupture de stock,Metier,ETU003361,40,50,0,100%
+73,BackOffice,Import,/backOffice/import,Detecter colonnes non conformes dans le CSV - logique validation,Metier,ETU003361,40,50,0,100%
+74,BackOffice,Import,/backOffice/import,Afficher message d erreur pour colonnes non conformes,Affichage,ETU003361,20,25,0,100%
+75,BackOffice,Import,/backOffice/import,Valider format date DD/MM/YYYY sur chaque ligne - parsing,Metier,ETU003361,40,50,0,100%
+76,BackOffice,Import,/backOffice/import,Afficher la ligne et la valeur incorrecte pour erreurs date,Affichage,ETU003361,20,25,0,100%
+77,BackOffice,Import,/backOffice/import,Verifier que les montants sont positifs (validation import),Metier,ETU003361,35,45,0,100%
+78,BackOffice,Import,/backOffice/import,Afficher recapitulatif des erreurs d import (UI feedback global),Affichage,ETU003361,30,40,0,100%
+79,BackOffice,Import,/backOffice/import,Correction logique import : gestion doublons produits,Metier,ETU003361,50,65,0,100%
+80,BackOffice,Import,/backOffice/import,Correction logique import : gestion references manquantes,Metier,ETU003361,50,65,0,100%
+81,BackOffice,Import,/backOffice/import,Corrections suite retours QA prof - pt1 import,Metier,ETU003361,50,65,0,100%
+82,BackOffice,Import,/backOffice/import,Corrections suite retours QA prof - pt2 affichage et feedback,Interaction,ETU003361,35,45,0,100%
+83,BackOffice,Stock,/backOffice/stock,Page ajout en stock : layout + formulaire saisie,Affichage,ETU003361,35,45,0,100%
+84,BackOffice,Stock,/backOffice/stock,Logique ajout en stock - pt1 appel API et gestion reponse,Metier,ETU003361,50,65,0,100%
+85,BackOffice,Stock,/backOffice/stock,Logique ajout en stock - pt2 gestion erreurs et validation,Metier,ETU003361,40,50,0,100%
+86,BackOffice,Stock,/backOffice/stock,Message retour apres ajout stock (succes / erreur),Interaction,ETU003361,20,25,0,100%
+87,BackOffice,Stock,/backOffice/stock/evolution,Modifier existingApp pour debloquer l API stock historique,Metier,ETU003361,55,70,0,100%
+88,BackOffice,Stock,/backOffice/stock/evolution,Tableau evolution stock journalier - pt1 layout et structure,Affichage,ETU003361,35,45,0,100%
+89,BackOffice,Stock,/backOffice/stock/evolution,Tableau evolution stock journalier - pt2 connexion donnees API,Metier,ETU003361,50,65,0,100%
+90,BackOffice,Stock,/backOffice/stock/evolution,Tester tableau evolution stock (donnees reelles + cas limites),Interaction,ETU003361,35,45,0,100%
+91,,,,,,,,0,0,#DIV/0!
+92,,,,,,,,0,0,#DIV/0!
+93,,,,,,,,0,0,#DIV/0!
+94,,,,,,,,0,0,#DIV/0!
+95,,,,,,,,0,0,#DIV/0!
+96,,,,,,,,0,0,#DIV/0!
+97,,,,,,,,0,0,#DIV/0!
+98,,,,,,,,0,0,#DIV/0!
+99,,,,,,,,0,0,#DIV/0!

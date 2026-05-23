@@ -1,0 +1,24 @@
+import { formatDateTime } from "../backend/utils/utils"
+
+function FOOderRow({order, edit = null,  multiplicateur =1,  currentDateUpdate = "", onChange, onClick}) {
+    const totalPaid = Number(order.totalPaid ?? 0)
+
+    return (
+        <tr>
+            <td>{order.id ?? "N/A"}</td>
+            <td>{order.customerName ?? "N/A"}</td>
+            <td>{formatDateTime(order.dateAdd) || "N/A"}</td>
+            <td>{Number.isFinite(totalPaid) ? totalPaid.toFixed(2) : "N/A"}</td>
+            <td>{order.orderStateName ?? "N/A"}</td>
+            <td>
+                <input type="number" name="multiplicateur" onChange={onChange} value={edit?.multiplicateur ?? multiplicateur} />
+                <input type="date" name="dateUpdate" onChange={onChange} value={edit?.dateUpdate ?? currentDateUpdate}/>
+                <button type={"button"} onClick={onClick}>
+                    Dupliquer la commande            
+                </button>
+            </td>
+        </tr>
+    )
+}
+
+export default FOOderRow;
