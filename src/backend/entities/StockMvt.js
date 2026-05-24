@@ -7,7 +7,9 @@ class StockMvt {
     endpoint = "stock_movements"
 
     static stockEntryReasonIds = [1, 10]
+    static stockEntrySign = 1
     static stockExitReasonIds = [2, 3]
+    static stockExitSign = -1
 
     constructor(xml, validate = true) {
         const data = toJSON(xml) || {}

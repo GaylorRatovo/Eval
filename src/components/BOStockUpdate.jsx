@@ -5,7 +5,14 @@ import StockMvt from "../backend/entities/StockMvt.js";
 import {formatDateTime} from "../backend/utils/utils.js";
 import {MaterialReactTable, useMaterialReactTable} from "material-react-table";
 
-function BOStockUpdate({setCombination}) {
+/**
+ * Panneau de mise a jour des stocks BackOffice.
+ * Regles metier: journaliser chaque variation dans stock_mvt puis synchroniser stock_available.
+ * Methode: liste produits/declinaisons, saisit une quantite, applique ajout/retrait avec traçabilite.
+ * Parametres: setCombination, setProductDetails.
+ * Retour: JSX tableau editable des stocks.
+ */
+function BOStockUpdate({setCombination, setProductDetails}) {
     const [data, setData] = useState([])
     const [quantity, setQuantity] = useState({})
     const [dateChange, setDateChange] = useState("")
@@ -21,7 +28,7 @@ function BOStockUpdate({setCombination}) {
         }
     }
 
-    // appel à l'API pour récupérer les produits avec leur stock
+    // Etape 1: charger les produits avec stocks au montage du composant.
     useEffect(() => {
         const loadProducts = async () => {
             try {
@@ -34,9 +41,7 @@ function BOStockUpdate({setCombination}) {
         loadProducts().then(result => setData(result ?? []))
     }, []);
 
-    // transformation des données pour intégrer les déclinaisons comme sous-lignes
-    // ilay clé subRow convention
-    // dia avadika manaraka format an'ilay colonne de table ilay subRows
+    // Etape 2: transformer les declinaisons en sous-lignes pour table expandable.
     const tableData = useMemo(() => {
         return data.map((row) => ({
             ...row,
@@ -51,7 +56,7 @@ function BOStockUpdate({setCombination}) {
         }));
     }, [data]);
 
-    // déclaration des colonnes du datatable
+    // Etape 3: definir colonnes et actions (ajouter, retirer, voir evolution).
     const columns = useMemo(() => [
         {
             header: "Produits",
@@ -62,7 +67,7 @@ function BOStockUpdate({setCombination}) {
             accessorFn: (row) => row.isDeclination ? row.declinationName : "-",
         },
         {
-            header: "Stock",
+            header: "Stock disponible",
             accessorFn: (row) => row.isDeclination ? row.quantity : row.totalQuantity,
         },
         {
@@ -97,10 +102,11 @@ function BOStockUpdate({setCombination}) {
                     </button>
                     <button onClick={() => {
                         const isDeclination = Boolean(row.original?.isDeclination)
-                        const idProduct = isDeclination ? row.original.parentProduct?.id : row.original.product?.id
+                        const product = isDeclination ? row.original.parentProduct : row.original.product
                         const idProductAttribute = isDeclination ? (row.original.combinationId ?? 0) : 0
 
-                        setCombination([idProduct, idProductAttribute])
+                        setProductDetails(row.original)
+                        setCombination([product.id, idProductAttribute])
                     }}>
                         Voir évolution
                     </button>
@@ -109,10 +115,18 @@ function BOStockUpdate({setCombination}) {
         },
     ], [quantity, dateChange]);
 
+    /**
+     * Applique un mouvement de stock sur une ligne produit/declinaison.
+     * Regles metier: refuse quantite nulle; cree un stock_mvt puis met a jour stock_available.
+     * Parametres: row (ligne MRT), MVT_REASON ({id, sign}).
+     * Retour: Promise<void>.
+     */
     const updateQuantity = async (row, MVT_REASON) => {
+        // Etape 1: determiner le couple cible produit/declinaison.
         const isDeclination = Boolean(row.original?.isDeclination)
         const idProduct = isDeclination ? row.original.parentProduct?.id : row.original.product?.id
         const idProductAttribute = isDeclination ? (row.original.combinationId ?? 0) : 0
+        // Etape 2: lire la quantite saisie et calculer le delta signe.
         const amount = Number(quantity[row.id] ?? 0)
 
         if (!amount) return
@@ -120,6 +134,7 @@ function BOStockUpdate({setCombination}) {
         const delta = amount * MVT_REASON.sign
 
         try {
+            // Etape 3: recuperer le stock courant pour la cle cible.
             const stockApi = new StockAvailable({}, false)
             const existing = await stockApi.getByProductAndAttribute(idProduct, idProductAttribute)
 
@@ -128,7 +143,7 @@ function BOStockUpdate({setCombination}) {
                 return
             }
 
-            // insertion des mvts de stock
+            // Etape 4: ecrire un mouvement de stock pour conserver la traçabilite metier.
             const movement = StockMvt.fromData({
                 idStock: existing.id,
                 idProduct,
@@ -142,17 +157,15 @@ function BOStockUpdate({setCombination}) {
             })
             await movement.save()
 
-            // modification de stock available
+            // Etape 5: appliquer la quantite finale dans stock_available.
             const stockEntity = StockAvailable.fromData(existing)
             stockEntity.quantity = Number(existing.quantity ?? 0) + delta
             await stockEntity.update()
 
+            // Etape 6: rafraichir l'affichage et nettoyer la saisie temporaire.
             const fresh = await fetchProductWithStock()
-            // rafraississement du data existant
             setData(fresh ?? [])
             setQuantity((prev) => {
-                // Supprime la valeur temporaire associée à cette ligne du state `quantity` après réussite de la mise à jour.
-                // Cela réinitialise le champ d'entrée pour cette ligne.
                 const next = {...prev}
                 delete next[row.id]
                 return next
@@ -162,6 +175,7 @@ function BOStockUpdate({setCombination}) {
         }
     }
 
+    // Etape 7: configurer la table expand/collapse produit -> declinaisons.
     const table = useMaterialReactTable({
         columns,
         data: tableData,
@@ -175,6 +189,7 @@ function BOStockUpdate({setCombination}) {
         paginateExpandedRows: false,
     })
 
+    // Etape 8: rendre la zone de date puis le tableau d'edition stock.
     return <>
         <header>
             <h5>Mise à jour des stocks</h5>

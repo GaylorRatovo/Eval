@@ -39,12 +39,19 @@ const COUNTRY_ID = 8
 const STATE_ID = 0
 const ADDRESS_ALIAS = "Checkout"
 
+/**
+ * Verifie la disponibilite stock pour les lignes d'un panier.
+ * Regles metier: quantite minimum 1, prise en compte du multiplicateur de duplication.
+ * Parametres: cartRows (Array), multiplicateur (number).
+ * Retour: Promise<Array<{productId,productAttributeId,requested,available}>> erreurs de stock.
+ */
 const checkCartStock = async (cartRows = [], multiplicateur = 1) => {
     const stockApi = new StockAvailable({}, false)
     const errors = []
     const factor = Math.max(1, Math.trunc(Number(multiplicateur || 1)))
 
     for (const row of cartRows ?? []) {
+        // Etape 1: normaliser les ids et quantites de la ligne.
         const productId = Number(row?.productId || 0)
         const attributeId = Number(row?.productAttributeId || 0)
         const qty = Math.max(1, Math.trunc(Number(row?.quantity || 0))) * factor
@@ -52,6 +59,7 @@ const checkCartStock = async (cartRows = [], multiplicateur = 1) => {
             continue
         }
 
+        // Etape 2: charger le stock disponible pour le couple produit/attribut.
         const stock = await stockApi.getByProductAndAttribute(productId, attributeId)
         const available = Number(stock?.quantity ?? 0)
         if (qty > available) {
@@ -67,6 +75,11 @@ const checkCartStock = async (cartRows = [], multiplicateur = 1) => {
     return errors
 }
 
+/**
+ * Recupere les commandes enrichies (nom client + libelle etat).
+ * Parametres: aucun.
+ * Retour: Promise<Array<OrderRow>>.
+ */
 const getOrderRows = async () => {
     const orderClass = new Order("", false)
     const customerClass = new Customer("", false)
@@ -78,7 +91,7 @@ const getOrderRows = async () => {
         orderStateClass.getAll(),
     ])
 
-    //Fanaovana map [key, value]
+    // Etape 1: construire les maps d'enrichissement pour affichage.
     const customerById = new Map(
         customers.map((customer) => [Number(customer.id), `${customer.firstname} ${customer.lastname}`.trim()])
     )
@@ -89,6 +102,7 @@ const getOrderRows = async () => {
 
     console.log("orderstates", orderStateById);
 
+    // Etape 2: fusionner les informations pour chaque commande.
     return orders.map((order) => (
         {
             ...order,
@@ -98,6 +112,11 @@ const getOrderRows = async () => {
     ))
 }
 
+/**
+ * Recupere les commandes d'un client enrichies pour affichage.
+ * Parametres: customerId (number|string).
+ * Retour: Promise<Array<OrderRow>>.
+ */
 const getOrderRowsByCustomer = async (customerId) => {
     const orderClass = new Order("", false)
     const customerClass = new Customer("", false)
@@ -111,6 +130,7 @@ const getOrderRowsByCustomer = async (customerId) => {
 
     console.log("orders for customer", customerId, orders);
 
+    // Etape 1: indexer clients et etats pour enrichissement.
     const customerById = new Map(
         customers.map((customer) => [Number(customer.id), `${customer.firstname} ${customer.lastname}`.trim()])
     );
@@ -119,6 +139,7 @@ const getOrderRowsByCustomer = async (customerId) => {
         orderStates.map((orderState) => [Number(orderState.id), orderState.name])
     );
 
+    // Etape 2: projeter les commandes avec labels utiles cote UI.
     return orders.map((order) => (
         {
             ...order,
@@ -128,6 +149,12 @@ const getOrderRowsByCustomer = async (customerId) => {
     ))
 }
 
+/**
+ * Met a jour l'etat d'une commande via creation d'un historique.
+ * Regles metier: newStateId et dateUpdate obligatoires.
+ * Parametres: orderId, newStateId, dateUpdate.
+ * Retour: Promise<{success,orderId,orderStateId,orderHistory,rawResponse}>.
+ */
 const updateOrderState = async (orderId, newStateId, dateUpdate) => {
 
     if (!newStateId) {
@@ -141,8 +168,10 @@ const updateOrderState = async (orderId, newStateId, dateUpdate) => {
     console.log("updateOrderState", { orderId, newStateId, dateUpdate });
 
     try {
+        // Etape 1: normaliser la date locale pour l'historique.
         const dateAdd = ensureLocalDateTime(dateUpdate)
 
+        // Etape 2: construire et sauvegarder l'objet de transition d'etat.
         const payload = MyOrderState.fromData({
             orderId: Number(orderId),
             orderStateId: Number(newStateId),
@@ -155,6 +184,7 @@ const updateOrderState = async (orderId, newStateId, dateUpdate) => {
         const res = await payload.save()
         console.log("my_order_state response", res)
 
+        // Etape 3: relire l'historique pour retourner la derniere entree creee.
         const orderHistoryClass = new OrderHistory("", false)
         const histories = await orderHistoryClass.getByApi("id_order", Number(orderId))
 
@@ -174,104 +204,139 @@ const updateOrderState = async (orderId, newStateId, dateUpdate) => {
     }
 }
 
+/**
+ * Cree une ou plusieurs commandes a partir d'un panier.
+ * Regles metier: verifie le stock avant creation; clone genere des commandes supplementaires.
+ * Parametres: cart, customerId, date, clone.
+ * Retour: Promise<Array<{cart,order}>>.
+ */
 const createOrderFromCart = async (cart, customerId, date, clone = 0) => {
-    const cloneCount = Math.max(0, Math.trunc(Number(clone || 0)))
+    // Etape 1: determiner le nombre total de commandes a creer.
+    const cloneCount = Math.max(0, Math.trunc(Number(clone)))
     const totalOrders = cloneCount + 1
 
-    const stockErrors = await checkCartStock(cart?.cartRows ?? [], totalOrders)
+    // Etape 2: verifier la disponibilite stock pour l'ensemble des creations.
+    const stockErrors = await checkCartStock(cart.cartRows, totalOrders)
+
     if (stockErrors.length > 0) {
         const message = stockErrors
-            .map((item) => `product ${item.productId} attr ${item.productAttributeId}: ${item.requested} > ${item.available}`)
+            .map(item =>
+                `product ${item.productId} attr ${item.productAttributeId}: ${item.requested} > ${item.available}`
+            )
             .join("; ")
+
         throw new Error(`Stock insuffisant: ${message}`)
     }
 
+    // Etape 3: charger le client pour valider son existence puis normaliser la date.
     const customerApi = new Customer({}, false)
-    const customer = await customerApi.getById(customerId)
+    await customerApi.getById(customerId)
 
     const dateUsed = ensureLocalDateTime(date)
-    const addresses = await customer.getAddress()
-    const address = Array.isArray(addresses) && addresses.length > 0 ? addresses[0] : null
-
-    const baseRows = Array.isArray(cart?.cartRows) ? cart.cartRows : []
-    const defaultAddressId = address?.id ?? cart?.addressDeliveryId ?? 0
-
     const results = []
 
-    for (let idx = 0; idx < totalOrders; idx += 1) {
-        const cartRows = baseRows.map((row) => ({
-            ...row,
-            addressDeliveryId: row?.addressDeliveryId || defaultAddressId,
-        }))
+    // Etape 4: calculer les totaux de la commande source.
+    const originalTotals = await OrderPayload.computeOrderTotals(cart.cartRows)
 
+    const commonOrderData = {
+        customerId,
+        dateAdd: dateUsed,
+        dateUpd: dateUsed,
+        currentState: PAIEMENT_A_DISTANCE_ACCEPTE_ID,
+        module: PAYMENT_MODULE,
+        payment: PAYMENT_LABEL,
+        valid: VALID_FLAG,
+        conversionRate: CONVERSION_RATE,
+        totalDiscounts: TOTAL_DISCOUNTS,
+        totalDiscountsTaxIncl: TOTAL_DISCOUNTS_TAX_INCL,
+        totalDiscountsTaxExcl: TOTAL_DISCOUNTS_TAX_EXCL,
+        totalShipping: 0,
+        totalShippingTaxIncl: 0,
+        totalShippingTaxExcl: 0,
+        totalWrapping: 0,
+        totalWrappingTaxIncl: 0,
+        totalWrappingTaxExcl: 0,
+    }
+
+    // Etape 5: creer la commande originale depuis le panier courant.
+    const originalPayload = OrderPayload.fromCart(cart, {
+        ...commonOrderData,
+        totalPaid: originalTotals.totalTtc,
+        totalPaidTaxIncl: originalTotals.totalTtc,
+        totalPaidTaxExcl: originalTotals.totalHt,
+        totalPaidReal: originalTotals.totalTtc,
+        totalProducts: originalTotals.totalHt,
+        totalProductsWt: originalTotals.totalTtc,
+    })
+
+    const savedOriginalOrder =
+        await Order.fromData(originalPayload).save()
+
+    results.push({
+        cart,
+        order: savedOriginalOrder
+    })
+
+    // Etape 6: creer les clones (nouveau panier + nouvelle commande pour chaque clone).
+    for (let i = 0; i < cloneCount; i++) {
         const newCart = new Cart({
             customerId,
-            idGuest: cart?.idGuest ?? 0,
-            addressDeliveryId: defaultAddressId,
-            addressInvoiceId: address?.id ?? cart?.addressInvoiceId ?? defaultAddressId,
-            currencyId: cart?.currencyId ?? 0,
-            langId: cart?.langId ?? LANGUAGE_ID,
-            carrierId: cart?.carrierId ?? 0,
-            shopId: cart?.shopId ?? SHOP_ID,
-            shopGroupId: cart?.shopGroupId ?? SHOP_GROUP_ID,
-            secureKey: customer?.secureKey ?? cart?.secureKey ?? "",
-            recyclable: cart?.recyclable ?? 0,
-            gift: cart?.gift ?? 0,
-            giftMessage: cart?.giftMessage ?? "",
-            mobileTheme: cart?.mobileTheme ?? 0,
-            deliveryOption: cart?.deliveryOption ?? "",
-            allowSeperatedPackage: cart?.allowSeperatedPackage ?? 0,
+            idGuest: cart.idGuest,
+            addressDeliveryId: cart.addressDeliveryId,
+            addressInvoiceId: cart.addressInvoiceId,
+            currencyId: cart.currencyId,
+            langId: cart.langId,
+            carrierId: cart.carrierId,
+            shopId: cart.shopId,
+            shopGroupId: cart.shopGroupId,
+            secureKey: cart.secureKey,
+            recyclable: cart.recyclable,
+            gift: cart.gift,
+            giftMessage: cart.giftMessage,
+            mobileTheme: cart.mobileTheme,
+            deliveryOption: cart.deliveryOption,
+            allowSeperatedPackage: cart.allowSeperatedPackage,
             dateAdd: dateUsed,
             dateUpd: dateUsed,
-            cartRows,
+            cartRows: [...cart.cartRows],
         })
 
         const savedCart = await newCart.save()
-        const totals = await OrderPayload.computeOrderTotals(savedCart?.cartRows ?? [])
+
+        const totals = await OrderPayload.computeOrderTotals(
+            savedCart.cartRows
+        )
 
         const payload = OrderPayload.fromCart(savedCart, {
-            customerId,
-            addressDeliveryId: savedCart?.addressDeliveryId ?? 0,
-            addressInvoiceId: savedCart?.addressInvoiceId ?? 0,
-            dateAdd: dateUsed,
-            dateUpd: dateUsed,
-            langId: LANGUAGE_ID,
-            shopId: SHOP_ID,
-            shopGroupId: SHOP_GROUP_ID,
-            carrierId: savedCart?.carrierId ?? 0,
-            currencyId: savedCart?.currencyId ?? 0,
-            currentState: PAIEMENT_A_DISTANCE_ACCEPTE_ID,
-            module: PAYMENT_MODULE,
-            payment: PAYMENT_LABEL,
-            valid: VALID_FLAG,
-            conversionRate: CONVERSION_RATE,
-            totalDiscounts: TOTAL_DISCOUNTS,
-            totalDiscountsTaxIncl: TOTAL_DISCOUNTS_TAX_INCL,
-            totalDiscountsTaxExcl: TOTAL_DISCOUNTS_TAX_EXCL,
+            ...commonOrderData,
             totalPaid: totals.totalTtc,
             totalPaidTaxIncl: totals.totalTtc,
             totalPaidTaxExcl: totals.totalHt,
             totalPaidReal: totals.totalTtc,
             totalProducts: totals.totalHt,
             totalProductsWt: totals.totalTtc,
-            totalShipping: 0,
-            totalShippingTaxIncl: 0,
-            totalShippingTaxExcl: 0,
-            totalWrapping: 0,
-            totalWrappingTaxIncl: 0,
-            totalWrappingTaxExcl: 0,
         })
 
-        const order = Order.fromData(payload)
-        const savedOrder = await order.save()
-        results.push({ cart: savedCart, order: savedOrder })
+        const savedOrder =
+            await Order.fromData(payload).save()
+
+        results.push({
+            cart: savedCart,
+            order: savedOrder
+        })
     }
 
     return results
 }
 
+/**
+ * Duplique le panier d'une commande existante via CartService.
+ * Parametres: orderId, multiplicateur, dateUpdate.
+ * Retour: Promise<{success:boolean, cart:any, orderId:number}>.
+ */
 const duplicateCart = async (orderId, multiplicateur, dateUpdate) => {
     try {
+        // Etape 1: retrouver la commande puis le panier associe.
         const orderClass = new Order("", false)
         const order = await orderClass.getById(Number(orderId))
         let cart = null
@@ -281,6 +346,7 @@ const duplicateCart = async (orderId, multiplicateur, dateUpdate) => {
             cart = await cartClass.getById(Number(order.cartId))
         }
 
+        // Etape 2: deleguer la duplication metier au service panier.
         CartService.duplicateCart(cart, multiplicateur, dateUpdate);
 
         console.log("aaaaaaaaaaaaa", cart, " a la date ", dateUpdate, " avec multiplicateur ", multiplicateur, " et orderId ", orderId);
@@ -291,10 +357,25 @@ const duplicateCart = async (orderId, multiplicateur, dateUpdate) => {
     }
 }
 
+/**
+ * Variante utilitaire: creation de commande a partir d'un cartId.
+ * Parametres: cartId, customerId, date, clone.
+ * Retour: Promise<Array<{cart,order}>>.
+ */
+const createOrderFromCartId = async (cartId, customerId, date, clone = 0) => {
+    const cartClass = new Cart({}, false);
+    const cart = await cartClass.getById(Number(cartId));
+    if (!cart) {
+        throw new Error(`Cart ${cartId} not found`);
+    }
+    return await createOrderFromCart(cart, customerId, date, clone);
+}
+
 export default {
     getOrderRows,
     getOrderRowsByCustomer,
     updateOrderState,
     duplicateCart,
     createOrderFromCart,
+    createOrderFromCartId,
 }

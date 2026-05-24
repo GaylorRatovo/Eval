@@ -2,6 +2,7 @@ import JSZip from 'jszip'
 
 const SUPPORTED_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg']
 
+/** Ajoute une entree succes pour une image importee. */
 const pushSuccess = (collection, payload) => {
 	collection.push({
 		...payload,
@@ -9,6 +10,7 @@ const pushSuccess = (collection, payload) => {
 	})
 }
 
+/** Ajoute une entree erreur detaillee pour une image en echec. */
 const pushError = (collection, errors, payload, label, error) => {
 	collection.push({
 		...payload,
@@ -18,13 +20,16 @@ const pushError = (collection, errors, payload, label, error) => {
 	errors.push(`${label}: ${error?.message ?? 'Erreur inconnue'}`)
 }
 
+/** Extrait l'extension de fichier en minuscule. */
 const getFileExtension = (fileName) => {
 	const index = fileName.lastIndexOf('.')
 	return index >= 0 ? fileName.slice(index).toLowerCase() : ''
 }
 
+/** Verifie qu'un fichier image est supporte pour import. */
 const isSupportedImageFile = (fileName) => SUPPORTED_IMAGE_EXTENSIONS.includes(getFileExtension(fileName))
 
+/** Verifie qu'un fichier correspond a une archive zip. */
 const isZipFile = (file) => {
 	if (!file) {
 		return false
@@ -34,6 +39,7 @@ const isZipFile = (file) => {
 	return name.endsWith('.zip') || file.type === 'application/zip'
 }
 
+/** Extrait uniquement les images valides depuis une archive zip. */
 const extractImagesFromZip = async (zipFile) => {
 	const zip = await JSZip.loadAsync(zipFile)
 	const extractedFiles = []
@@ -61,6 +67,7 @@ const extractImagesFromZip = async (zipFile) => {
 	return extractedFiles
 }
 
+/** Normalise l'entree image(s) en tableau de fichiers image importables. */
 const resolveImageFiles = async (imageFiles) => {
 	const files = Array.isArray(imageFiles)
 		? imageFiles
@@ -77,6 +84,7 @@ const resolveImageFiles = async (imageFiles) => {
 	return files.filter((file) => isSupportedImageFile(file.name))
 }
 
+/** Upload une image vers l'endpoint PrestaShop images/products/{id}. */
 const uploadProductImage = async (productId, file) => {
 	const baseUrl = import.meta.env.VITE_PRESTASHOP_BACKEND_URL || ''
 	const apiKey = import.meta.env.VITE_PRESTASHOP_API_KEY
@@ -116,7 +124,14 @@ const uploadProductImage = async (productId, file) => {
 	return await response.text()
 }
 
+/**
+ * Import des images produits.
+ * Regles metier: nom du fichier image = reference produit; formats limites a png/jpg/jpeg.
+ * Parametres: imageFiles, file1Results, onProgress.
+ * Retour: Promise<results>.
+ */
 export const importFile4 = async (imageFiles, file1Results, onProgress = () => {}) => {
+	// Etape 1: initialiser l'objet de resultat.
 	const results = {
 		images: [],
 		errors: [],
@@ -128,6 +143,7 @@ export const importFile4 = async (imageFiles, file1Results, onProgress = () => {
 	}
 
 	try {
+		// Etape 2: valider la presence des entrees minimales.
 		if (!imageFiles) {
 			results.errors.push('Aucun fichier image sélectionné')
 			results.summary.totalErrors = results.errors.length
@@ -140,6 +156,7 @@ export const importFile4 = async (imageFiles, file1Results, onProgress = () => {
 			return results
 		}
 
+		// Etape 3: construire le mapping reference -> productId depuis file1.
 		const productsByReference = {}
 		for (const product of file1Results.products) {
 			if (product?.status === 'success' && product.id && product.reference) {
@@ -147,6 +164,7 @@ export const importFile4 = async (imageFiles, file1Results, onProgress = () => {
 			}
 		}
 
+		// Etape 4: resoudre les fichiers images effectifs (zip ou liste).
 		const validImages = await resolveImageFiles(imageFiles)
 		results.summary.totalImages = validImages.length
 
@@ -156,6 +174,7 @@ export const importFile4 = async (imageFiles, file1Results, onProgress = () => {
 			return results
 		}
 
+		// Etape 5: uploader chaque image liee a une reference connue.
 		for (let idx = 0; idx < validImages.length; idx++) {
 			const file = validImages[idx]
 			try {
@@ -191,11 +210,13 @@ export const importFile4 = async (imageFiles, file1Results, onProgress = () => {
 			}
 		}
 
+		// Etape 6: finaliser et retourner.
 		results.summary.totalErrors = results.errors.length
 		onProgress?.({ step: 'complete', message: 'Import Fichier 4 (Images) terminé!' })
 
 		return results
 	} catch (error) {
+		// Etape 7: propager une erreur globale si un echec structurel survient.
 		results.errors.push(`Erreur générale Fichier 4: ${error.message}`)
 		results.summary.totalErrors = results.errors.length
 		throw error

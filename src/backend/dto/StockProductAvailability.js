@@ -1,4 +1,4 @@
-import { normalizeNumber, buildMapById, buildProductCombinationKey, splitProductCombinationKey } from "../utils/utils.js";
+import {normalizeNumber, buildMapById, buildProductCombinationKey, splitProductCombinationKey} from "../utils/utils.js";
 import StockMvt from "../entities/StockMvt.js";
 import Order from "../entities/Order.js";
 
@@ -11,6 +11,7 @@ export default class StockProductAvailability {
      * @param {number} availableQuantity
      * @param {object|null} product
      * @param {object|null} declinaison
+     * @param category
      * @param {object|null} stockAvailable
      * @param {Array<object>} stockMovements
      * @param {Array<object>} orderDetails
@@ -54,8 +55,10 @@ export default class StockProductAvailability {
     ) {
         if (!Array.isArray(productsWithCombinations) || productsWithCombinations.length === 0) return []
 
-        const entryReasonIds = new Set(StockMvt.stockEntryReasonIds ?? [])
-        const exitReasonIds = new Set(StockMvt.stockExitReasonIds ?? [])
+        //const entryReasonIds = new Set(StockMvt.stockEntryReasonIds ?? [])
+        //const exitReasonIds = new Set(StockMvt.stockExitReasonIds ?? [])
+        const entrySign = StockMvt.stockEntrySign;
+        const exitSign = StockMvt.stockExitSign;
         const reservedStateIds = new Set(Order.reservedStateIds ?? [])
 
         const stockAvailablesById = buildMapById(stockAvailables)
@@ -99,11 +102,11 @@ export default class StockProductAvailability {
             allMovementsByKey.set(key, list)
 
             const reasonId = Number(mvt?.idStockMvtReason)
-            if (entryReasonIds.has(reasonId)) {
+            if (Number(mvt?.sign) === entrySign) {
                 const prev = normalizeNumber(entryQtyByKey.get(key))
                 entryQtyByKey.set(key, prev + normalizeNumber(mvt?.physicalQuantity))
             }
-            if (exitReasonIds.has(reasonId)) {
+            if (Number(mvt?.sign) === exitSign) {
                 const prev = normalizeNumber(entryQtyByKey.get(key))
                 entryQtyByKey.set(key, prev - normalizeNumber(mvt?.physicalQuantity))
             }
@@ -154,7 +157,7 @@ export default class StockProductAvailability {
             }
 
             for (const key of allMovementsByKey.keys()) {
-                const { productId: keyProductId, productAttributeId } = splitProductCombinationKey(key)
+                const {productId: keyProductId, productAttributeId} = splitProductCombinationKey(key)
                 if (keyProductId === productId) {
                     const attrId = productAttributeId
                     if (!(hasDeclinaisons && attrId === 0)) {
@@ -164,7 +167,7 @@ export default class StockProductAvailability {
             }
 
             for (const key of orderDetailsByKey.keys()) {
-                const { productId: keyProductId, productAttributeId } = splitProductCombinationKey(key)
+                const {productId: keyProductId, productAttributeId} = splitProductCombinationKey(key)
                 if (keyProductId === productId) {
                     const attrId = productAttributeId
                     if (!(hasDeclinaisons && attrId === 0)) {
@@ -174,7 +177,7 @@ export default class StockProductAvailability {
             }
 
             for (const key of stockAvailablesByKey.keys()) {
-                const { productId: keyProductId, productAttributeId } = splitProductCombinationKey(key)
+                const {productId: keyProductId, productAttributeId} = splitProductCombinationKey(key)
                 if (keyProductId === productId) {
                     const attrId = productAttributeId
                     if (!(hasDeclinaisons && attrId === 0)) {

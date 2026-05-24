@@ -13,6 +13,12 @@ import CartService from "./CartService.js"
 
 const CANCELLED_ORDER_STATE_ID = 6
 
+/**
+ * Additionne les montants HT/TTC d'un ensemble de lignes.
+ * Regles metier: normalise les valeurs non numeriques a 0 via normalizeNumber.
+ * Parametres: rows (Array).
+ * Retour: { totalHT: number, totalTTC: number }.
+ */
 function sumRowsTotals(rows = []) {
 	return rows.reduce(
 		(accumulator, row) => {
@@ -24,7 +30,14 @@ function sumRowsTotals(rows = []) {
 	)
 }
 
+/**
+ * Calcule les totaux HT/TTC d'une ligne de panier.
+ * Regles metier: ignore les lignes sans produit ou quantite <= 0.
+ * Parametres: cartRow.
+ * Retour: Promise<{ totalHT: number, totalTTC: number }>.
+ */
 async function getCartRowTotals(cartRow) {
+	// Etape 1: extraire les infos minimales du row panier.
 	const productId = Number(cartRow?.productId || 0)
 	const quantity = normalizeNumber(cartRow?.quantity)
 
@@ -32,11 +45,13 @@ async function getCartRowTotals(cartRow) {
 		return { totalHT: 0, totalTTC: 0 }
 	}
 
+	// Etape 2: charger le produit et determiner son prix TTC (declinaison prioritaire).
 	const product = await new Product({}, false).getById(productId)
 	if (!product) {
 		return { totalHT: 0, totalTTC: 0 }
 	}
 
+	// Etape 3: convertir en HT et calculer les totaux de ligne.
 	const priceTTC = Number(await product.getDeclinaisonDetails(Number(cartRow?.productAttributeId || 0)).then((details) => details?.priceTtc ?? product.getTtcPrice()))
 	const taxRate = Number(await product.getTax())
 	const priceHT = convertTTCtoHT(priceTTC, taxRate)
@@ -47,8 +62,15 @@ async function getCartRowTotals(cartRow) {
 	}
 }
 
+/**
+ * Construit une ligne dashboard pour un panier (date + totaux).
+ * Parametres: cart.
+ * Retour: Promise<{dayKey,totalHT,totalTTC}>.
+ */
 async function buildCartDashboardRow(cart) {
+	// Etape 1: calculer les totaux de chaque ligne panier.
 	const rowTotals = await Promise.all((cart?.cartRows ?? []).map((cartRow) => getCartRowTotals(cartRow)))
+	// Etape 2: sommer les lignes pour produire une ligne dashboard.
 	const totals = sumRowsTotals(rowTotals)
 
 	return {
@@ -58,10 +80,17 @@ async function buildCartDashboardRow(cart) {
 	}
 }
 
+/**
+ * Somme les totaux des lignes dashboard panier.
+ */
 export function sumCartDashboardRowsTotals(rows = []) {
 	return sumRowsTotals(rows)
 }
 
+/**
+ * Agrege les lignes de paniers par jour.
+ * Retour: Array triee par jour desc.
+ */
 export function aggregateCartDashboardRowsByDay(rows = []) {
 	const grouped = new Map()
 
@@ -83,7 +112,14 @@ export function aggregateCartDashboardRowsByDay(rows = []) {
 	return Array.from(grouped.values()).sort((left, right) => String(right.day).localeCompare(String(left.day)))
 }
 
+/**
+ * Charge les donnees source du dashboard BackOffice.
+ * Regles metier: exclut les commandes annulees, calcule indicateurs commandes et paniers sans commande.
+ * Parametres: aucun.
+ * Retour: Promise<{orderStates,dashboardRows,cartDashboardRows}>.
+ */
 export async function loadDashboardData() {
+	// Etape 1: charger les collections necessaires en parallele.
 	const [categories, products, orders, orderStates] = await Promise.all([
 		new Category({}, false).getExclApi([1, 2]),
 		new Product({}, false).getAll(),
@@ -91,12 +127,14 @@ export async function loadDashboardData() {
 		new OrderState({}, false).getInclApi([11, 5]),
 	])
 
+	// Etape 2: transformer commandes+details en lignes metriques dashboard.
 	const productsWithDeclinaisons = await ProductWithDeclinaisons.listFromProductsWithCategories(products, categories)
 	const orderIds = orders.map((order) => order?.id).filter((id) => Number.isFinite(Number(id)));
 	const orderDetailsRaw = orderIds.length > 0 ? await new OrderDetail({}, false).getBy("orderId", orderIds) : [];
 	const orderGroups = OrderWithDetails.groupOrdersWithDetails(orders, orderDetailsRaw)
 	const orderDetailsMetrics = OrderDetailWithMetrics.listFromOrderGroups(orderGroups, productsWithDeclinaisons)
 	const dashboardRows = OrderDashboardDTO.fromOrderCollection(orders, orderDetailsMetrics, orderStates);
+	// Etape 3: calculer les lignes dashboard pour les paniers non convertis.
 	const cartsWithoutOrder = await CartService.getCartsWithoutOrder();
 	const cartDashboardRows = await Promise.all(cartsWithoutOrder.map((cart) => buildCartDashboardRow(cart)));
 
@@ -107,6 +145,9 @@ export async function loadDashboardData() {
 	}
 }
 
+/**
+ * Filtre des lignes dashboard par dates min/max inclusives.
+ */
 export function filterDashboardRowsByDates(rows = [], dateMin = "", dateMax = "") {
 	if (!dateMin && !dateMax) {
 		return [...rows]
@@ -124,6 +165,9 @@ export function filterDashboardRowsByDates(rows = [], dateMin = "", dateMax = ""
 	})
 }
 
+/**
+ * Filtre des lignes dashboard selon un statut de commande.
+ */
 export function filterDashboardRowsByStatus(rows = [], statusId = "all") {
 	if (statusId === "all" || statusId === "") {
 		return [...rows]
@@ -133,14 +177,24 @@ export function filterDashboardRowsByStatus(rows = [], statusId = "all") {
 	return rows.filter((row) => Number(row?.statusId) === numericStatusId)
 }
 
+/**
+ * Compte le nombre de lignes dashboard.
+ */
 export function countDashboardRows(rows = []) {
 	return rows.length
 }
 
+/**
+ * Somme les totaux des lignes dashboard commandes.
+ */
 export function sumDashboardRowsTotals(rows = []) {
 	return sumRowsTotals(rows)
 }
 
+/**
+ * Agrege les lignes commandes par jour.
+ * Retour: Array triee par jour desc.
+ */
 export function aggregateDashboardRowsByDay(rows = []) {
 	const grouped = new Map()
 

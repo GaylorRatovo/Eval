@@ -1,5 +1,5 @@
 import Category from "../entities/Category"
-import { normalizeNumber, buildMapById } from "../utils/utils.js";
+import {normalizeNumber} from "../utils/utils.js";
 
 export default class ProductWithCombinations {
     /**
@@ -73,7 +73,7 @@ export default class ProductWithCombinations {
         if (!product) return null
 
         const categoryId = product.idCategoryDefault ?? product.categoryId ?? null
-        const categoryPromise = categoryId ? new Category({}, false).getById(categoryId) : Promise.resolve(null)
+        const categoryPromise = categoryId ? await new Category({}, false).getById(categoryId) : null
         const declinaisonsPromise = product.getDeclinaisons()
 
         const [category, declinaisons] = await Promise.all([categoryPromise, declinaisonsPromise])

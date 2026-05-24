@@ -8,6 +8,7 @@ class Order {
     endpoint = "orders"
 
     static reservedStateIds = [11]
+    static deliveredStateIds = [5]
 
     constructor(xml, validate = true) {
         const data = toJSON(xml) || {}

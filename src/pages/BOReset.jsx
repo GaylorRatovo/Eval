@@ -2,6 +2,13 @@ import {useMemo, useState} from "react";
 import {RESOURCES_TO_RESET} from "../backend/services/Reset.js";
 import {deleteAll} from "../backend/services/Reset.js";
 
+/**
+ * Page BackOffice de reinitialisation des ressources.
+ * Regles metier: respecter l'ordre logique de suppression pour eviter les conflits de dependances.
+ * Methode: selection de ressources puis suppression en masse via le service Reset.
+ * Parametres: aucun.
+ * Retour: JSX de selection/suppression.
+ */
 function BOReset() {
     const [selected, setSelected] = useState(new Set());
     const orderByValue = useMemo(() => {
@@ -15,11 +22,19 @@ function BOReset() {
     }, [])
     const isAllSelected = selected.size === RESOURCES_TO_RESET.length;
     
+	/**
+	 * Active/desactive une ressource dans la selection.
+	 * Regles metier: maintien de l'ordre de suppression defini dans RESOURCES_TO_RESET.
+	 * Parametres: key (string) valeur de ressource.
+	 * Retour: void.
+	 */
     const toggleItem = (key) => {
         setSelected((prev) => {
+            // Etape 1: cloner la selection actuelle pour eviter la mutation directe.
             const next = new Set(prev);
             next.has(key) ? next.delete(key) : next.add(key);
             console.log("reset key", key);
+            // Etape 2: trier selon l'ordre metier de suppression.
             const ordered = Array.from(next).sort((a, b) => {
                 const orderA = orderByValue.get(a)?.order ?? Number.MAX_SAFE_INTEGER;
                 const orderB = orderByValue.get(b)?.order ?? Number.MAX_SAFE_INTEGER;
@@ -29,6 +44,11 @@ function BOReset() {
         });
     }
 
+	/**
+	 * Selectionne ou deselectionne toutes les ressources.
+	 * Parametres: aucun.
+	 * Retour: void.
+	 */
     const toggleAll = () => {
         if (isAllSelected) {
             setSelected(new Set());
@@ -39,6 +59,12 @@ function BOReset() {
         }
     }
 
+    /**
+     * Lance la suppression des ressources selectionnees.
+     * Regles metier: operation destructive reservee a des environnements de test.
+     * Parametres: aucun.
+     * Retour: void (promise non attendue explicitement dans le composant).
+     */
     const doDelete = () => {
         deleteAll(selected);
     }

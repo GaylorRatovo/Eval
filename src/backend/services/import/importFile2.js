@@ -8,6 +8,7 @@ import { convertTTCtoHT, formatDateTime, normalizeNumber, roundDecimal } from '.
 
 const FILE2_HEADER = ['reference', 'specificité', 'karazany', 'stock_initial', 'prix_vente_ttc']
 
+/** Ajoute une entree succes dans les resultats. */
 const pushSuccess = (collection, payload) => {
 	collection.push({
 		...payload,
@@ -15,6 +16,7 @@ const pushSuccess = (collection, payload) => {
 	})
 }
 
+/** Ajoute une entree erreur detaillee dans les resultats. */
 const pushError = (collection, errors, payload, label, error) => {
 	collection.push({
 		...payload,
@@ -24,12 +26,14 @@ const pushError = (collection, errors, payload, label, error) => {
 	errors.push(`${label}: ${error?.message ?? 'Erreur inconnue'}`)
 }
 
+/** Parse et valide le CSV du fichier 2. */
 export const parseFile2CSV = async (file) => {
 	const text = await file.text()
 	checkCSVHeader(text, FILE2_HEADER)
 	return parseCSV(text)
 }
 
+/** Extrait la liste des groupes d'attributs uniques. */
 export const extractAttributeGroups = (csvData) => {
 	const groups = new Set()
 	for (const row of csvData) {
@@ -41,6 +45,7 @@ export const extractAttributeGroups = (csvData) => {
 	return Array.from(groups)
 }
 
+/** Extrait les valeurs d'attributs groupees par groupe. */
 export const extractAttributesByGroup = (csvData) => {
 	const byGroup = new Map()
 	for (const row of csvData) {
@@ -57,6 +62,7 @@ export const extractAttributesByGroup = (csvData) => {
 	return byGroup
 }
 
+/** Construit une entite ProductOption. */
 export const buildAttributeGroupEntity = (groupName) => {
 	const option = new ProductOption('', false)
 	option.groupType = 'select'
@@ -67,6 +73,7 @@ export const buildAttributeGroupEntity = (groupName) => {
 	return option
 }
 
+/** Construit une entite ProductOptionValue. */
 export const buildAttributeValueEntity = (valueName, groupId) => {
 	const optionValue = new ProductOptionValue('', false)
 	optionValue.idAttributeGroup = groupId
@@ -76,6 +83,7 @@ export const buildAttributeValueEntity = (valueName, groupId) => {
 	return optionValue
 }
 
+/** Construit une entite Combination. */
 export const buildCombinationEntity = (idProduct, reference, attributeId, priceImpact) => {
 	const combination = new Combination('', false)
 	combination.productId = idProduct
@@ -87,6 +95,7 @@ export const buildCombinationEntity = (idProduct, reference, attributeId, priceI
 	return combination
 }
 
+/** Construit les maps produits/prix depuis les resultats fichier 1. */
 export const buildProductMap = (file1Results) => {
 	const productMap = new Map()
 	const priceMap = new Map()
@@ -111,6 +120,7 @@ export const buildProductMap = (file1Results) => {
 	return { productMap, priceMap }
 }
 
+/** Cree les groupes d'attributs et retourne groupName -> groupId. */
 export const createAttributeGroups = async (groups, results) => {
 	const groupMap = new Map()
 	for (const groupName of groups) {
@@ -126,6 +136,7 @@ export const createAttributeGroups = async (groups, results) => {
 	return groupMap
 }
 
+/** Cree les valeurs d'attributs et retourne "group:value" -> valueId. */
 export const createAttributeValues = async (attributesByGroup, groupMap, results) => {
 	const valueMap = new Map()
 	for (const [groupName, values] of attributesByGroup.entries()) {
@@ -159,8 +170,10 @@ export const createAttributeValues = async (attributesByGroup, groupMap, results
 	return valueMap
 }
 
+/** Retourne la quantite numerique d'un stock_available. */
 const getStockQuantity = (stock) => Number(stock?.quantity) || 0
 
+/** Cree un mouvement de stock trace (entree/sortie) pour un delta. */
 const createStockMovement = async ({ stockId, idProduct, idProductAttribute, delta, moveDate }) => {
 	const movement = new StockMvt({}, false)
 	movement.idStock = stockId
@@ -170,7 +183,7 @@ const createStockMovement = async ({ stockId, idProduct, idProductAttribute, del
 	movement.idCurrency = 0
 	movement.managementType = ''
 	movement.idEmployee = 1
-	movement.idStockMvtReason = delta > 0 ? 3 : 4
+	movement.idStockMvtReason = delta > 0 ? 1 : 2
 	movement.idOrder = 0
 	movement.idSupplyOrder = 0
 	movement.productName = ''
@@ -188,6 +201,7 @@ const createStockMovement = async ({ stockId, idProduct, idProductAttribute, del
 	return movement.save()
 }
 
+/** Synchronise stock_available vers une quantite cible et ecrit un mouvement si delta non nul. */
 const syncStockQuantity = async ({ idProduct, idProductAttribute, desiredQuantity, moveDate }) => {
 	const stockApi = new StockAvailable({}, false)
 	const existing = await stockApi.getByProductAndAttribute(idProduct, idProductAttribute)
@@ -228,6 +242,7 @@ const syncStockQuantity = async ({ idProduct, idProductAttribute, desiredQuantit
 	}
 }
 
+/** Extrait le contexte metier d'une ligne CSV declinaison/stock. */
 const getRowContext = (row) => {
 	return {
 		reference: row.reference?.trim() ?? '',
@@ -238,6 +253,7 @@ const getRowContext = (row) => {
 	}
 }
 
+/** Cree une combinaison pour une ligne import. */
 const createCombinationForRow = async ({ idProduct, reference, valueName, attributeId, priceImpact }) => {
 	const savedCombination = await buildCombinationEntity(
 		idProduct,
@@ -249,6 +265,7 @@ const createCombinationForRow = async ({ idProduct, reference, valueName, attrib
 	return savedCombination.id ?? 0
 }
 
+/** Calcule l'impact prix HT d'une declinaison. */
 const getPriceImpact = (prixVenteTtc, sourcePrice) => {
 	if (!prixVenteTtc) {
 		return 0
@@ -258,6 +275,7 @@ const getPriceImpact = (prixVenteTtc, sourcePrice) => {
 	return declinationPriceHT - sourcePrice.priceHT
 }
 
+/** Traite une ligne complete (combinaison + stock). */
 const processRow = async ({ row, productMap, priceMap, attributeValueMap, results }) => {
 	const { reference, groupName, valueName, stockInitial, prixVenteTtc } = getRowContext(row)
 
@@ -313,6 +331,7 @@ const processRow = async ({ row, productMap, priceMap, attributeValueMap, result
 	return stockEntry
 }
 
+/** Traite toutes les lignes du CSV et cree combinaisons/stocks. */
 export const createCombinationsAndStocks = async (csvData, productMap, priceMap, attributeValueMap, results, onProgress) => {
 	for (let idx = 0; idx < csvData.length; idx++) {
 		try {
@@ -334,6 +353,7 @@ export const createCombinationsAndStocks = async (csvData, productMap, priceMap,
 	}
 }
 
+/** Construit le resume quantitatif du fichier 2. */
 export const buildSummary = (results) => {
 	return {
 		totalAttributeGroups: results.attributeGroups.length,
@@ -348,7 +368,14 @@ export const buildSummary = (results) => {
 	}
 }
 
+/**
+ * Execute l'import complet du fichier 2.
+ * Regles metier: creer d'abord groupes/valeurs, puis combinaisons et stock.
+ * Parametres: csvFile, file1Results, onProgress.
+ * Retour: Promise<results>.
+ */
 export const importFile2 = async (csvFile, file1Results, onProgress = () => {}) => {
+	// Etape 1: initialiser les conteneurs de resultat.
 	const results = {
 		attributeGroups: [],
 		attributes: [],
@@ -358,6 +385,7 @@ export const importFile2 = async (csvFile, file1Results, onProgress = () => {}) 
 		summary: {},
 	}
 
+	// Etape 2: parser le CSV et verifier presence de donnees.
 	onProgress?.({ step: 'parsing', message: 'Parsing du CSV fichier 2...' })
 	const csvData = await parseFile2CSV(csvFile)
 
@@ -365,8 +393,10 @@ export const importFile2 = async (csvFile, file1Results, onProgress = () => {}) 
 		throw new Error('Fichier CSV vide')
 	}
 
+	// Etape 3: construire referentiels d'entrees (produits/prix) depuis fichier 1.
 	const { productMap, priceMap } = buildProductMap(file1Results)
 
+	// Etape 4: creer attributs puis combinaisons/stocks.
 	onProgress?.({ step: 'attributeGroups', message: 'Creation des groupes d\'attributs...' })
 	const groups = extractAttributeGroups(csvData)
 	const groupMap = await createAttributeGroups(groups, results)
@@ -378,6 +408,7 @@ export const importFile2 = async (csvFile, file1Results, onProgress = () => {}) 
 	onProgress?.({ step: 'combinations', message: 'Creation des declinaisons et mise a jour du stock...' })
 	await createCombinationsAndStocks(csvData, productMap, priceMap, attributeValueMap, results, onProgress)
 
+	// Etape 5: calculer resume final et retourner resultats.
 	results.summary = buildSummary(results)
 	onProgress?.({ step: 'complete', message: 'Import fichier 2 termine!' })
 

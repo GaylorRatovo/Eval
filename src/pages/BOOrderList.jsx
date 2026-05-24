@@ -1,8 +1,15 @@
-import {useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 import orderService from "../backend/services/OderService"
-import BOOderRow from "../components/BOOrderRow";
+import BOOrderRow from "../components/BOOrderRow";
 import { formatDateInput } from "../backend/utils/utils"
 
+/**
+ * Page BackOffice de gestion des commandes.
+ * Regles metier: permet de modifier manuellement l'etat d'une commande avec date de mise a jour.
+ * Methode: charge les commandes puis envoie les changements via le service metier.
+ * Parametres: aucun.
+ * Retour: JSX de la liste de commandes.
+ */
 function BOOrderList() {
     const [orders, setOrders] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -13,6 +20,11 @@ function BOOrderList() {
         dateUpdate: "",
     });
 
+    /**
+     * Met a jour l'etat local d'edition pour une commande cible.
+     * Parametres: orderId (number) puis evenement de formulaire.
+     * Retour: void.
+     */
     const handleChange = (orderId) => (e) => {
         const { name, value } = e.target;
 
@@ -23,15 +35,24 @@ function BOOrderList() {
         }));
     };
 
+	/**
+	 * Enregistre la modification d'etat d'une commande.
+	 * Regles metier: impose un etat cible et une date; fallback sur valeurs existantes de la commande.
+	 * Parametres: orderId (number|string).
+	 * Retour: Promise<void>.
+	 */
     const handleClick = async (orderId) => {
+		// Etape 1: retrouver la commande courante et calculer les valeurs effectives.
         const currentOrder = orders.find((order) => Number(order.id) === Number(orderId))
         const newStateId = edit.orderStateId || currentOrder?.currentState || ""
         const dateUpdate = edit.dateUpdate || formatDateInput(currentOrder?.dateUpd) || formatDateInput(currentOrder?.dateAdd)
 
         try {
+			// Etape 2: appeler le service de transition d'etat et stocker le resultat.
             const result = await orderService.updateOrderState(orderId, newStateId, dateUpdate);
             setActionResult(result);
         } catch (error) {
+			// Etape 3: transformer l'erreur en objet d'etat affichable a l'utilisateur.
             console.log("Erreur lors de la modification de l'état de la commande", error);
             setActionResult({
                 success: false,
@@ -41,6 +62,7 @@ function BOOrderList() {
             });
         }
 
+	// Etape 4: log de trace pour diagnostic local.
         console.log(
             "Modifier la commande " +
                 orderId +
@@ -52,6 +74,7 @@ function BOOrderList() {
     };
 
     useEffect(()=>{
+		// Etape 5: chargement initial de la liste des commandes BackOffice.
         const loadOrders = async () =>{
             setIsLoading(true);
             try {
@@ -79,37 +102,14 @@ function BOOrderList() {
                 </div>
             )}
             {isLoading ? (<p>Chargements des clients</p>) : (
-                <table>
-                    <thead>
-                    <tr>
-                        <th>REFERENCE</th>
-                        <th>NOM</th>
-                        <th>DATE</th>
-                        <th>TOTAL</th>
-                        <th>ETAT ACTUEL</th>
-                        <th>NOUVELLE ETAT</th>
-                        <th>ACTION</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {
-                        orders.map((order) => {
-                            const isEditing = edit.orderId === order.id;
-
-                            return <BOOderRow
-                                key={order.id} 
-                                order={order} 
-                                edit={isEditing ? edit : null}
-                                currentStateId={order.currentState}
-                                currentDateUpdate={formatDateInput(order.dateUpd || order.dateAdd)}
-                                onChange={handleChange(order.id)}
-                                onClick={() => handleClick(order.id)}
-                            />;
-                        })
-                    }
-                    </tbody>
-                </table>)
-            }
+                <BOOrderRow
+                    title="Commandes"
+                    rows={orders}
+                    edit={edit}
+                    onChange={handleChange}
+                    onClick={handleClick}
+                />
+            )}
         </>
     )
 

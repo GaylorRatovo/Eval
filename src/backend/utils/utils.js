@@ -272,3 +272,16 @@ export const validateOrderStatusStrict = (status) => {
     }
     return trimmed
 }
+
+export const getDisplayText = (value, fallback = "") => {
+    if (typeof value === "string") return value
+    if (Array.isArray(value) && value.length > 0) {
+        const first = value[0]
+        if (typeof first === "string") return first
+        if (first && typeof first.value === "string") return first.value
+    }
+    if (value && typeof value === "object" && typeof value.value === "string") {
+        return value.value
+    }
+    return fallback
+}

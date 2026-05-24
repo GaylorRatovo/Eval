@@ -5,7 +5,6 @@ import TaxRule from "./TaxRule"
 import Tax from "./Tax"
 import Combination from "./Combination"
 import StockAvailable from "./StockAvailable"
-import { ensureLocalDateTime } from "../utils/utils"
 
 const buildImageUrl = (productId, imageId) => {
 	const baseUrl = import.meta.env.VITE_PRESTASHOP_BACKEND_URL || ""

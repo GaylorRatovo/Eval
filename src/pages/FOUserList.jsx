@@ -5,6 +5,13 @@ import useLocalStorage from "../hooks/useLocalStorage.jsx";
 import CustomerService from "../backend/services/CustomerService.js";
 import {useNavigate} from "react-router-dom";
 
+/**
+ * Page de selection d'utilisateur FrontOffice.
+ * Regles metier: autorise connexion client reel ou mode anonyme (guest).
+ * Methode: charge la liste clients, puis stocke le contexte user dans localStorage.
+ * Parametres: aucun.
+ * Retour: JSX de selection utilisateur.
+ */
 function FOUserList() {
     const [customers, setCustomers] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -13,6 +20,7 @@ function FOUserList() {
     const navigate = useNavigate();
 
     useEffect(() => {
+        // Etape 1: charger les clients disponibles pour connexion FO.
         async function loadCustomers() {
             setIsLoading(true);
 
@@ -31,12 +39,18 @@ function FOUserList() {
         loadCustomers();
     }, []);
 
+    /**
+     * Connecte un client connu et redirige vers le catalogue.
+     */
     const connectCustomer = (customer) => {
         setUser(customer);
         setIsGuest(false);
         navigate('/fo/products')
     }
     
+    /**
+     * Connecte en mode anonyme et redirige vers le catalogue.
+     */
     const connectGuest = () => {
         setUser({id: CustomerService.ANONYMOUS_ID});
         setIsGuest(true);

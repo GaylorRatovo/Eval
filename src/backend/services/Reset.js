@@ -1,5 +1,6 @@
 import api from "../utils/api"
 
+// Liste ordonnee des ressources supprimables en reset BackOffice.
 export const RESOURCES_TO_RESET = [
     { order : 1,value: 'order_details', description: 'Détails de commande'},
     { order : 2,value: 'order_histories', description: 'Historique des commandes'},
@@ -21,6 +22,7 @@ export const RESOURCES_TO_RESET = [
     { order : 18,value: 'categories', description: 'Catégories produits'},
 ];
 
+// IDs proteges de la suppression pour eviter de casser les referentiels minimaux.
 export const PROTECTED_IDS = {
   // Catalogue
   products:                     [],
@@ -55,12 +57,21 @@ export const PROTECTED_IDS = {
   stock_movements:              [],
 }
 
+/**
+ * Supprime en masse les ressources selectionnees.
+ * Regles metier: chaque ressource est purgee en excluant les IDs proteges.
+ * Methode: boucle sequentielle pour respecter l'ordre metier transmis par l'appelant.
+ * Parametres: toDelete (Iterable<string>) liste de ressources.
+ * Retour: Promise<boolean> true si la boucle se termine.
+ */
 export const deleteAll = async (toDelete) => {
 
+    // Etape 1: iterer sur chaque ressource et deleguer la suppression a l'API utilitaire.
     for (const element of toDelete) {
         console.log(element)
         await api.deleteAll(element, PROTECTED_IDS[element])
     }
 
+    // Etape 2: confirmer la fin de traitement.
     return true;
 }

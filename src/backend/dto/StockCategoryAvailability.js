@@ -1,4 +1,4 @@
-import { normalizeNumber } from "../utils/utils.js";
+import {normalizeNumber} from "../utils/utils.js";
 
 export default class StockCategoryAvailability {
     /**

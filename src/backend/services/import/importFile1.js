@@ -11,6 +11,7 @@ const CONSTANTS = {
 	ID_COUNTRY: 8,
 }
 
+/** Ajoute une entree succes dans une collection de resultat. */
 const pushSuccess = (collection, payload) => {
 	collection.push({
 		...payload,
@@ -18,6 +19,7 @@ const pushSuccess = (collection, payload) => {
 	})
 }
 
+/** Ajoute une entree erreur detaillee dans les resultats d'import. */
 const pushError = (collection, errors, payload, label, error) => {
 	collection.push({
 		...payload,
@@ -27,11 +29,13 @@ const pushError = (collection, errors, payload, label, error) => {
 	errors.push(`${label}: ${error?.message ?? 'Erreur inconnue'}`)
 }
 
+/** Parse le CSV du fichier 1 en objets ligne. */
 export const parseFile1CSV = async (file) => {
 	const text = await file.text()
 	return parseCSV(text)
 }
 
+/** Extrait la liste unique des categories depuis le CSV. */
 export const extractCategories = (csvData) => {
 	const categories = new Set()
 	for (const row of csvData) {
@@ -43,6 +47,7 @@ export const extractCategories = (csvData) => {
 	return Array.from(categories)
 }
 
+/** Extrait la liste unique des taxes (rate -> libelle). */
 export const extractTaxes = (csvData) => {
 	const taxes = new Map()
 	for (const row of csvData) {
@@ -54,6 +59,7 @@ export const extractTaxes = (csvData) => {
 	return taxes
 }
 
+/** Construit une entite Category prete a sauvegarde. */
 export const buildCategoryEntity = (categoryName) => {
 	const category = new Category('', false)
 	category.parentId = CONSTANTS.ID_PARENT_CATEGORY
@@ -70,6 +76,7 @@ export const buildCategoryEntity = (categoryName) => {
 	return category
 }
 
+/** Construit une entite Tax prete a sauvegarde. */
 export const buildTaxEntity = (rate, name) => {
 	const tax = new Tax('', false)
 	tax.rate = normalizeNumber(rate)
@@ -79,6 +86,7 @@ export const buildTaxEntity = (rate, name) => {
 	return tax
 }
 
+/** Construit une entite TaxRuleGroup prete a sauvegarde. */
 export const buildTaxRuleGroupEntity = (rate) => {
 	const group = new TaxRuleGroup('', false)
 	group.name = `Groupe TVA ${rate}`
@@ -87,6 +95,7 @@ export const buildTaxRuleGroupEntity = (rate) => {
 	return group
 }
 
+/** Construit une entite TaxRule prete a sauvegarde. */
 export const buildTaxRuleEntity = (groupId, taxId, rate) => {
 	const rule = new TaxRule('', false)
 	rule.idTaxRulesGroup = groupId
@@ -97,6 +106,7 @@ export const buildTaxRuleEntity = (groupId, taxId, rate) => {
 	return rule
 }
 
+/** Construit une entite Product prete a sauvegarde. */
 export const buildProductEntity = (productData, categoryId, taxRulesGroupId) => {
 	const product = new Product('', false)
 	const productName = productData.nom?.trim() ?? ''
@@ -134,6 +144,7 @@ export const buildProductEntity = (productData, categoryId, taxRulesGroupId) => 
 	return product
 }
 
+/** Cree toutes les categories detectees et retourne un mapping nom -> id. */
 export const createCategories = async (categories, results) => {
 	const categoryMap = {}
 
@@ -151,6 +162,7 @@ export const createCategories = async (categories, results) => {
 	return categoryMap
 }
 
+/** Cree toutes les taxes detectees et retourne un mapping rate -> id. */
 export const createTaxes = async (taxes, results) => {
 	const taxMap = new Map()
 
@@ -168,6 +180,7 @@ export const createTaxes = async (taxes, results) => {
 	return taxMap
 }
 
+/** Cree les groupes de taxe et retourne un mapping rate -> groupId. */
 export const createTaxRulesGroups = async (taxes, results) => {
 	const groupMap = {}
 
@@ -185,6 +198,7 @@ export const createTaxRulesGroups = async (taxes, results) => {
 	return groupMap
 }
 
+/** Cree les regles de taxe a partir des maps taxes/groupes. */
 export const createTaxRules = async (taxMap, taxRulesGroupMap, results) => {
 	for (const [rate, taxId] of taxMap.entries()) {
 		try {
@@ -206,6 +220,7 @@ export const createTaxRules = async (taxMap, taxRulesGroupMap, results) => {
 	}
 }
 
+/** Cree les produits du CSV et alimente la collection de resultat. */
 export const createProducts = async (csvData, categoryMap, taxRulesGroupMap, results, onProgress) => {
 	for (let idx = 0; idx < csvData.length; idx++) {
 		const row = csvData[idx]
@@ -245,6 +260,7 @@ export const createProducts = async (csvData, categoryMap, taxRulesGroupMap, res
 	}
 }
 
+/** Construit un resume quantitatif de l'import fichier 1. */
 export const buildSummary = (results) => {
 	return {
 		totalCategories: results.categories.length,
@@ -261,7 +277,14 @@ export const buildSummary = (results) => {
 	}
 }
 
+/**
+ * Execute l'import complet du fichier 1.
+ * Regles metier: categories/taxes/regles/produits sont crees dans cet ordre.
+ * Parametres: csvFile, onProgress.
+ * Retour: Promise<results>.
+ */
 export const importFile1 = async (csvFile, onProgress = () => {}) => {
+	// Etape 1: initialiser le conteneur de resultat.
 	const results = {
 		categories: [],
 		taxes: [],
@@ -272,6 +295,7 @@ export const importFile1 = async (csvFile, onProgress = () => {}) => {
 		summary: {},
 	}
 
+	// Etape 2: parser le CSV puis verifier qu'il n'est pas vide.
 	onProgress?.({ step: 'parsing', message: 'Parsing du CSV...' })
 	const csvData = await parseFile1CSV(csvFile)
 
@@ -279,9 +303,11 @@ export const importFile1 = async (csvFile, onProgress = () => {}) => {
 		throw new Error('Fichier CSV vide')
 	}
 
+	// Etape 3: extraire les referentiels categories/taxes.
 	const categories = extractCategories(csvData)
 	const taxes = extractTaxes(csvData)
 
+	// Etape 4: creer les objets metier dans l'ordre des dependances.
 	onProgress?.({ step: 'categories', message: 'Creation des categories...' })
 	const categoryMap = await createCategories(categories, results)
 
@@ -297,6 +323,7 @@ export const importFile1 = async (csvFile, onProgress = () => {}) => {
 	onProgress?.({ step: 'products', message: 'Creation des produits...' })
 	await createProducts(csvData, categoryMap, taxRulesGroupMap, results, onProgress)
 
+	// Etape 5: finaliser le resume et retourner la charge utile.
 	results.summary = buildSummary(results)
 	onProgress?.({ step: 'complete', message: 'Import termine!' })
 

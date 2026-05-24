@@ -7,6 +7,12 @@ const CustomerService = {
     ANONYMOUS_ID: 1,
     DEFAULT_COUNTRY_ID: 8,
 
+    /**
+     * Associe un client existant a un panier invite.
+     * Regles metier: le client doit avoir au moins une adresse.
+     * Parametres: cart, customer.
+     * Retour: Promise<{cart, customer, address}>.
+     */
     async connectCustomerToCart(cart, customer) {
         if (!cart?.id) {
             throw new Error("Cart not found");
@@ -24,6 +30,12 @@ const CustomerService = {
         return { cart: updated, customer: freshCustomer, address: addresses[0] };
     },
 
+    /**
+     * Cree un nouveau client + adresse puis associe ce client au panier.
+     * Regles metier: creation compte client non invite (isGuest=0).
+     * Parametres: cart, form, options.
+     * Retour: Promise<{cart, customer, address}>.
+     */
     async registerCustomerForCart(cart, form, options = {}) {
         if (!cart?.id) {
             throw new Error("Cart not found");

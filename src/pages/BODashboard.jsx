@@ -12,6 +12,13 @@ import {
 import BODashboardTable from "../components/BODashboardTable.jsx"
 import { formatAmount, getOrderStateLabel } from "../backend/utils/dashboardUtils.js"
 
+/**
+ * Affiche le tableau de bord BackOffice des commandes et paniers.
+ * Regles metier: exclut les commandes annulees (etat 6) et autorise un filtrage par dates/statut.
+ * Methode: charge les donnees une fois, puis calcule des vues derivees (totaux, aggregations) via useMemo.
+ * Parametres: aucun (composant React de page).
+ * Retour: JSX avec KPI, filtres et tableaux journaliers.
+ */
 function BODashboard() {
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState("")
@@ -23,18 +30,24 @@ function BODashboard() {
 	const [statusId, setStatusId] = useState("all")
 
 	useEffect(() => {
+		// Etape 1: chargement initial des donnees dashboard au montage de la page.
 		const load = async () => {
 			try {
+				// Etape 2: initialiser l'etat de chargement et vider les erreurs precedentes.
 				setLoading(true)
 				setError("")
 
+				// Etape 3: recuperer commandes, paniers et statuts depuis le service.
 				const data = await loadDashboardData()
 				setDashboardRows(data.dashboardRows ?? [])
 				setCartDashboardRows(data.cartDashboardRows ?? [])
+				// Etape 4: retirer l'etat "annule" de la liste de filtre pour rester coherent metier.
 				setOrderStates((data.orderStates ?? []).filter((state) => Number(state?.id) !== 6))
 			} catch (err) {
+				// Etape 5: afficher un message explicite en cas d'echec.
 				setError(err?.message || "Erreur lors du chargement du dashboard")
 			} finally {
+				// Etape 6: fin de chargement dans tous les cas.
 				setLoading(false)
 			}
 		}
@@ -42,15 +55,18 @@ function BODashboard() {
 		load()
 	}, [])
 
+	// Etape 7: appliquer les filtres utilisateur (dates puis statut) sur les commandes.
 	const filteredRows = useMemo(() => {
 		const byDate = filterDashboardRowsByDates(dashboardRows, dateMin, dateMax)
 		return filterDashboardRowsByStatus(byDate, statusId)
 	}, [dashboardRows, dateMin, dateMax, statusId])
 
+	// Etape 8: calculer les indicateurs derives commandes.
 	const dailyRows = useMemo(() => aggregateDashboardRowsByDay(filteredRows), [filteredRows])
 	const totals = useMemo(() => sumDashboardRowsTotals(filteredRows), [filteredRows])
 	const ordersCount = useMemo(() => countDashboardRows(filteredRows), [filteredRows])
 
+	// Etape 9: appliquer le filtrage date pour les paniers, puis calculer leurs indicateurs.
 	const filteredCartRows = useMemo(() => {
 		return filterDashboardRowsByDates(cartDashboardRows, dateMin, dateMax)
 	}, [cartDashboardRows, dateMin, dateMax])
@@ -59,6 +75,12 @@ function BODashboard() {
 	const cartTotals = useMemo(() => sumCartDashboardRowsTotals(filteredCartRows), [filteredCartRows])
 	const cartCount = useMemo(() => countDashboardRows(filteredCartRows), [filteredCartRows])
 
+	/**
+	 * Reinitialise les filtres visuels.
+	 * Regles metier: retour a la vue globale sans contrainte.
+	 * Parametres: aucun.
+	 * Retour: void.
+	 */
 	const resetFilters = () => {
 		setDateMin("")
 		setDateMax("")

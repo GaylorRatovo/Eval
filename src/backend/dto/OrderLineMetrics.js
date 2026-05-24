@@ -124,13 +124,15 @@ export default class OrderLineMetrics {
             stockAvailablesByKey.set(key, stockAvailable)
         }
 
-        const entryReasonIds = new Set(StockMvt.stockEntryReasonIds ?? [])
+        //const entryReasonIds = new Set(StockMvt.stockEntryReasonIds ?? [])
+        const entrySign = StockMvt.stockEntrySign;
         const entryMovementsByKey = new Map()
         const entryQtyByKey = new Map()
 
         for (const mvt of stockMovements ?? []) {
-            const reasonId = Number(mvt?.idStockMvtReason)
-            if (!entryReasonIds.has(reasonId)) continue
+            //const reasonId = Number(mvt?.idStockMvtReason)
+            //if (!entryReasonIds.has(reasonId)) continue
+            if (Number(mvt?.sign) !== entrySign) continue
 
             let productId = Number(mvt?.idProduct)
             let attributeId = Number(mvt?.idProductAttribute ?? 0)

@@ -1,3 +1,8 @@
+/**
+ * Ligne utilisateur FO pour selection de connexion.
+ * Parametres: customer, onClick.
+ * Retour: JSX ligne de tableau.
+ */
 function FOUserRow({customer, onClick}) {
 
     return <tr>

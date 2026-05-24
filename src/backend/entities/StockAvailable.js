@@ -1,7 +1,6 @@
 import api from "../utils/api"
 import {toJSON, toJSONList, toXML} from "../xml/stockAvailableXML"
 import {buildApiFilterQuery} from "../utils/utils"
-import StockMvt from "./StockMvt.js";
 
 class StockAvailable {
     endpoint = "stock_availables"

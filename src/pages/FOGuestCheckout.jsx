@@ -7,6 +7,13 @@ import OderService from "../backend/services/OderService.js";
 import CustomerService from "../backend/services/CustomerService.js";
 import FOUserRow from "../components/FOUserRow.jsx";
 
+/**
+ * Page de finalisation pour utilisateur invite.
+ * Regles metier: l'invite doit etre rattache a un client reel (connexion ou creation) avant commande.
+ * Methode: propose mode login/register puis cree la commande depuis le panier actif.
+ * Parametres: aucun.
+ * Retour: JSX du tunnel de finalisation.
+ */
 function FOGuestCheckout() {
     const [user, setUser] = useLocalStorage("user", null);
     const [isGuest, setIsGuest] = useLocalStorage("isGuest", false);
@@ -31,6 +38,7 @@ function FOGuestCheckout() {
     const navigate = useNavigate();
 
     useEffect(() => {
+        // Etape 1: proteger la route et charger le panier actif invite.
         if (!user?.id) {
             navigate("/fo");
             return;
@@ -66,6 +74,7 @@ function FOGuestCheckout() {
     }, [isGuest, navigate, user?.id]);
 
     useEffect(() => {
+        // Etape 2: charger les clients existants seulement en mode login.
         const loadCustomers = async () => {
             try {
                 const customerApi = new Customer({}, false);
@@ -85,6 +94,11 @@ function FOGuestCheckout() {
         }
     }, [mode]);
 
+    /**
+     * Associe un client existant au panier invite.
+     * Parametres: customer.
+     * Retour: Promise<void>.
+     */
     const handleLoginCustomer = async (customer) => {
         if (!customer || isSubmitting) {
             return;
@@ -104,6 +118,9 @@ function FOGuestCheckout() {
         }
     };
 
+    /**
+     * Met a jour un champ du formulaire register.
+     */
     const handleFormChange = (field) => (event) => {
         setForm((prev) => ({
             ...prev,
@@ -111,7 +128,14 @@ function FOGuestCheckout() {
         }));
     };
 
+    /**
+     * Cree un client + adresse puis associe ce client au panier.
+     * Regles metier: tous les champs obligatoires doivent etre renseignes.
+     * Parametres: event submit.
+     * Retour: Promise<void>.
+     */
     const handleFormSubmit = async (event) => {
+        // Etape 3: valider les entrees formulaire avant appel service.
         event.preventDefault();
         setError("");
 
@@ -148,6 +172,11 @@ function FOGuestCheckout() {
         }
     };
 
+    /**
+     * Confirme la commande finale depuis le panier courant.
+     * Parametres: aucun.
+     * Retour: void (promesse geree en then/catch).
+     */
     const handleConfirmOrder = () => {
         if (!cart || !user?.id) {
             setError("Panier ou client introuvable");

@@ -3,7 +3,7 @@ import { toJSON, toJSONList, toXML } from "../xml/productOptionValueXML"
 import ProductOption from "./ProductOption"
 
 class ProductOptionValue {
-	endpoint = "/product_option_values"
+	endpoint = "product_option_values"
 
 	constructor(xml, validate = true) {
 		const data = toJSON(xml) || {}

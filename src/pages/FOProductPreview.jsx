@@ -3,6 +3,13 @@ import { useParams } from "react-router-dom";
 import Product from "../backend/entities/Product.js";
 import CartService from "../backend/services/CartService.js";
 
+/**
+ * Page detail d'un produit FrontOffice.
+ * Regles metier: la quantite est bornee par stock, et l'ajout panier exige un client connecte.
+ * Methode: charge produit + declinaisons + prix + stock, puis ajoute au panier.
+ * Parametres: aucun (id recupere depuis route).
+ * Retour: JSX detail produit.
+ */
 function FOProductPreview() {
     const { id } = useParams();
 
@@ -17,6 +24,9 @@ function FOProductPreview() {
     const [stockQuantity, setStockQuantity] = useState(null);
     const [badge, setBadge] = useState(null);
 
+    /**
+     * Change la declinaison selectionnee et recharge le stock associe.
+     */
     const handleDeclinaisonChange = (e) => {
         const selectedId = Number(e.target.value);
         const selected = declinaisons?.values?.find((v) => v.id === selectedId) || null;
@@ -31,6 +41,10 @@ function FOProductPreview() {
         }
     };
 
+    /**
+     * Ajoute la configuration produit courante au panier client.
+     * Regles metier: idCustomer obligatoire, attribute 0 si pas de declinaison.
+     */
     const handleAjouterPanier = () => {
         const userRaw = localStorage.getItem("user");
         const user = userRaw ? JSON.parse(userRaw) : null;
@@ -56,6 +70,9 @@ function FOProductPreview() {
     };
 
 
+    /**
+     * Calcule le prix TTC affiche en fonction de la declinaison.
+     */
     const getDisplayedPrice = (baseTtc, taxRate, declinaison) => {
         const impactPrice = declinaison ? Number(declinaison.priceImpact || 0) : 0;
         const safeBase = Number.isFinite(Number(baseTtc)) ? Number(baseTtc) : 0;
@@ -66,12 +83,14 @@ function FOProductPreview() {
     const displayedPrice = getDisplayedPrice(ttcPrice, tax, selectedDeclinaison);
 
     useEffect(() => {
+        // Etape 1: charger toutes les informations necessaires a la fiche produit.
         const loadProduct = async () => {
             setIsLoading(true);
 
             try {
                 const productObject = new Product({}, false);
 
+                // Etape 2: recuperer badge, image, taxes et prix TTC.
                 const productData = await productObject.getById(id);
                 setProduct(productData);
 
@@ -86,6 +105,7 @@ function FOProductPreview() {
 
                 const ttcPrice = await productData.getTtcPrice();
                 setTtcPrice(ttcPrice);
+                // Etape 3: charger declinaisons puis stock de la declinaison active.
                 const data = await productData.getDeclinaisons();
                 setDeclinaisons(data);
                 if (data?.values?.length) {

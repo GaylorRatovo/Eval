@@ -2,7 +2,7 @@ import api from "../utils/api"
 import { toJSON, toJSONList, toXML } from "../xml/productOptionXML"
 
 class ProductOption {
-	endpoint = "/product_options"
+	endpoint = "product_options"
 
 	constructor(xml, validate = true) {
 		const data = toJSON(xml) || {}

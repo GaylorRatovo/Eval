@@ -1,6 +1,13 @@
 import {useState} from "react";
 import executeImport from "../backend/services/import/executeImport.js";
 
+/**
+ * Page d'import BackOffice (produits, declinaisons, commandes, images).
+ * Regles metier: le fichier produits est obligatoire pour initialiser le referentiel.
+ * Methode: collecte les fichiers utilisateur puis appelle l'orchestrateur d'import.
+ * Parametres: aucun.
+ * Retour: JSX du formulaire d'import et resultat.
+ */
 function BOImport() {
     const [productFile, setProductFile] = useState(null)
     const [declinaisonFile, setDeclinaisonFile] = useState(null)
@@ -11,13 +18,21 @@ function BOImport() {
     const [isImporting, setIsImporting] = useState(false)
     const [doImport, setDoImport] = useState(false)
 
+	/**
+	 * Soumet le lot d'import.
+	 * Regles metier: nettoie l'etat precedent, execute la sequence, remonte erreurs explicites.
+	 * Parametres: event (submit du formulaire).
+	 * Retour: Promise<void>.
+	 */
     const handleSubmit = async (event) => {
+		// Etape 1: bloquer le comportement navigateur et reinitialiser les retours precedent.
         event.preventDefault()
         setImportError(null)
         setImportResult(null)
         setIsImporting(true)
 
         try {
+			// Etape 2: lancer l'import orchestre avec callback de progression.
             const result = await executeImport({
                 productFile,
                 declinaisonFile,
@@ -27,10 +42,13 @@ function BOImport() {
                 onProgress: (progress) => console.log(progress),
             })
 
+			// Etape 3: exposer le resultat brut pour analyse detaillee.
             setImportResult(result)
         } catch (error) {
+			// Etape 4: afficher une erreur utilisateur comprehensible.
             setImportError(error?.message ?? 'Erreur inconnue')
         } finally {
+			// Etape 5: remettre l'interface en mode normal.
             setIsImporting(false)
         }
     }
