@@ -5,12 +5,14 @@ import ProductOptionValue from "../entities/ProductOptionValue.js";
 
 /**
  * Récupère tous les produits avec leurs informations de stock et déclinaisons.
+ * OPTIMISÉ: Batch queries avec getAll() et indexing via Maps au lieu de requêtes individuelles.
  *
  * Paramètres: aucun.
  * Retour: Promise<Array> — chaque élément contient { product, totalQuantity, declinations }.
  *
  * Règles métier:
- * - Pour chaque produit, récupère `stockAvailables` et mappe les déclinaisons.
+ * - Récupère tous les stocks, combinations, options en parallèle (3 requêtes au lieu de 1500+)
+ * - Crée des Maps pour les lookups O(1) au lieu de requêtes séquentielles
  */
 export async function fetchProductWithStock() {
     const productApi = new Product({}, false);
@@ -19,16 +21,30 @@ export async function fetchProductWithStock() {
     const optionValueApi = new ProductOptionValue({}, false);
 
     const products = await productApi.getAll();
+
+    // OPTIMISATION: Paralléliser les 3 requêtes au lieu de faire ~1500+ requêtes en boucle
+    const [allStocks, allCombinations, allOptionValues] = await Promise.all([
+        stockApi.getAll(),
+        combinationApi.getAll(),
+        optionValueApi.getAll()
+    ]);
+
+    // OPTIMISATION: Indexer avec Maps pour lookups O(1) au lieu de boucles
+    const stockMap = new Map(allStocks.map(s => [Number(s.id), s]));
+    const combinationMap = new Map(allCombinations.map(c => [Number(c.id), c]));
+    const optionValueMap = new Map(allOptionValues.map(o => [Number(o.id), o]));
+
     const result = [];
 
     for (const product of products) {
         const entries = product.associations?.stockAvailables ?? [];
-
         let totalQuantity = 0;
         const declinations = [];
 
         for (const entry of entries) {
-            const stock = await stockApi.getById(entry.id);
+            const stock = stockMap.get(Number(entry.id));
+            if (!stock) continue;
+
             const quantity = Number(stock.quantity) || 0;
             const combinationId = Number(entry.idProductAttribute);
 
@@ -37,15 +53,17 @@ export async function fetchProductWithStock() {
                 totalQuantity = quantity;
             } else {
                 // stock d'une déclinaison
-                // récupérer le nom de la déclinaison via ses option values
-                const combination = await combinationApi.getById(combinationId);
-                const nameParts = [];
+                const combination = combinationMap.get(combinationId);
+                if (!combination) continue;
 
-                for (const optionValueId of combination.optionValueIds) {
-                    const optionValue = await optionValueApi.getById(optionValueId);
-                    const label = Product.pickLang(optionValue.name, 1);
-                    if (label) {
-                        nameParts.push(label);
+                const nameParts = [];
+                for (const optionValueId of combination.optionValueIds || []) {
+                    const optionValue = optionValueMap.get(Number(optionValueId));
+                    if (optionValue) {
+                        const label = Product.pickLang(optionValue.name, 1);
+                        if (label) {
+                            nameParts.push(label);
+                        }
                     }
                 }
 

@@ -41,6 +41,7 @@ const ADDRESS_ALIAS = "Checkout"
 
 /**
  * Vérifie la disponibilité du stock pour un ensemble de lignes de panier.
+ * OPTIMISÉ: Une seule requête getAll() + Map indexing au lieu de requête par ligne
  *
  * Paramètres:
  * - `cartRows` (Array): tableau de lignes ({ productId, productAttributeId, quantity }).
@@ -50,16 +51,24 @@ const ADDRESS_ALIAS = "Checkout"
  *
  * Règles métier:
  * - Construit la quantité demandée = quantity * multiplicateur.
- * - Interroge `StockAvailable.getByProductAndAttribute` pour connaître la disponibilité.
+ * - Récupère TOUS les stocks en parallèle (1 requête) au lieu de par ligne.
+ * - Utilise Map pour O(1) lookups au lieu d'appels API séquentiels.
  * - Si requested > available, ajoute une erreur.
- *
- * Exemple:
- * await checkCartStock([{ productId:1, productAttributeId:0, quantity:2 }], 1)
  */
 const checkCartStock = async (cartRows = [], multiplicateur = 1) => {
     const stockApi = new StockAvailable({}, false)
     const errors = []
     const factor = Math.max(1, Math.trunc(Number(multiplicateur || 1)))
+
+    // OPTIMISATION: Une seule requête pour tous les stocks au lieu de par ligne
+    const allStocks = await stockApi.getAll()
+    
+    // OPTIMISATION: Indexer avec Map pour lookups O(1)
+    const stockMap = new Map()
+    for (const stock of allStocks) {
+        const key = `${Number(stock.id_product) || Number(stock.productId) || 0}_${Number(stock.id_product_attribute) || Number(stock.productAttributeId) || 0}`
+        stockMap.set(key, stock)
+    }
 
     for (const row of cartRows ?? []) {
         const productId = Number(row?.productId || 0)
@@ -69,8 +78,11 @@ const checkCartStock = async (cartRows = [], multiplicateur = 1) => {
             continue
         }
 
-        const stock = await stockApi.getByProductAndAttribute(productId, attributeId)
+        // OPTIMISATION: Lookup Map au lieu de requête API
+        const key = `${productId}_${attributeId}`
+        const stock = stockMap.get(key)
         const available = Number(stock?.quantity ?? 0)
+        
         if (qty > available) {
             errors.push({
                 productId,

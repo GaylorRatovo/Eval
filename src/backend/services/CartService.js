@@ -246,6 +246,7 @@ const addProductToCart = async (idCustomer, idProduct, idProductAttribute, quant
 
 /**
  * Duplique un panier en réinjectant ses lignes (utile pour tests/duplication).
+ * OPTIMISÉ: Parallélise les ajouts avec Promise.all() au lieu de séquentiels.
  *
  * Paramètres:
  * - `cart` (Cart): panier source.
@@ -256,12 +257,20 @@ const addProductToCart = async (idCustomer, idProduct, idProductAttribute, quant
  *
  * Règles métier:
  * - Pour chaque ligne, appelle `addProductToCart` en multipliant la quantité.
+ * - OPTIMISATION: Utilise Promise.all() pour paralléliser au lieu de boucle séquentielle.
  */
 const duplicateCart = async(cart, multiplicateur, dateUpdate) => {
-    for (const row of cart.cartRows) {
-        row.quantity = Number(row.quantity) * multiplicateur
-        await addProductToCart(cart.customerId, row.productId, row.productAttributeId, row.quantity);
-    }   
+    // OPTIMISATION: Paralléliser tous les ajouts au lieu de sequential await
+    await Promise.all(
+        (cart.cartRows || []).map(row => 
+            addProductToCart(
+                cart.customerId, 
+                row.productId, 
+                row.productAttributeId, 
+                Number(row.quantity) * multiplicateur
+            )
+        )
+    )
 }
 
 /**
@@ -328,14 +337,15 @@ const getCartRowDetails = async (cartRow) => {
     }
 
     const attributeId = Number(cartRow.productAttributeId || 0);
-    const declinaisonDetails = await product.getDeclinaisonDetails(attributeId);
-    const stockQuantity = await getStockForProductAttribute(product.id, attributeId);
+    
+    // OPTIMISATION: Paralléliser les 3 requêtes indépendantes
+    const [declinaisonDetails, stockQuantity, images] = await Promise.all([
+        product.getDeclinaisonDetails(attributeId),
+        getStockForProductAttribute(product.id, attributeId),
+        product.getImages()
+    ]);
 
-    let productImageURL = declinaisonDetails.imageUrl;
-    if (!productImageURL) {
-        const images = await product.getImages();
-        productImageURL = images[0] || "";
-    }
+    const productImageURL = declinaisonDetails.imageUrl || images[0] || "";
 
     return {
         product,
