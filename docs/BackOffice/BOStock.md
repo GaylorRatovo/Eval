@@ -1,51 +1,57 @@
 # BOStock
 
-## 1. Présentation générale
-- Rôle : Interface pour mettre à jour le stock d'une combinaison produit/déclinaison et visualiser l'historique (évolution).
-- Problème métier : Ajuster manuellement les quantités et consulter les mouvements de stock.
-- Utilisateurs : Gestionnaires de stock, administrateurs BackOffice.
+## Présentation générale
+`BOStock.jsx` regroupe la mise à jour de stock et la consultation de l'évolution journalière d'un produit ou d'une déclinaison. La page sépare clairement l'action d'écriture et la lecture de l'historique.
 
-## 2. Fonctionnement utilisateur
-1. L'utilisateur sélectionne une combinaison via `BOStockUpdate`.
-2. `BOStockUpdate` transmet au parent à la fois `combination` et `productDetails`.
-3. Le composant parent `BOStock` transmet ces deux données à `BOStockEvolution`.
-3. L'utilisateur modifie les quantités (via `BOStockUpdate`) ou consulte l'historique (via `BOStockEvolution`).
+## Fonctionnement utilisateur
+1. `BOStockUpdate` charge les produits et leurs stocks.
+2. L'utilisateur choisit une ligne simple ou une déclinaison.
+3. Il saisit une quantité, une date de mouvement et choisit ajouter ou retirer.
+4. Le stock disponible est mis à jour après la création du mouvement.
+5. `BOStockEvolution` reçoit la combinaison sélectionnée et affiche le détail journalier.
 
-## 3. Flux de données
+## Flux de données
 Utilisateur
     ↓
-`BOStock.jsx` (états `combination`, `productDetails`)
+`BOStock.jsx`
     ↓
-`BOStockUpdate` (émet `setCombination` et `setProductDetails`)
+`BOStockUpdate.jsx`
     ↓
-`BOStockEvolution` (lit `combination` + `productDetails`, puis appelle `StockMvtService.getDailyMovement`)
+`ProductService.fetchProductWithStock()` puis `StockAvailable` et `StockMvt`
+    ↓
+`BOStockEvolution.jsx`
+    ↓
+`StockMvtService.getDailyMovement()`
 
-## 4. Logique métier
-- Quoi : Sélectionner une combinaison (productId + productAttributeId) et afficher son historique, permettre mises à jour.
-- Comment : Parent/child state lifting : `BOStockUpdate` met à jour `combination`; `BOStockEvolution` affiche les mouvements correspondant à la combinaison.
-- Pourquoi : Séparer la saisie (update) et la visualisation (evolution) pour clarté UX.
-- Quand : Interaction utilisateur lors d'une opération de stock.
+## Logique métier
+La page applique du state lifting : le parent conserve la combinaison courante pour éviter de recharger les données et pour partager la même sélection entre mise à jour et historique.
 
-Vérifications métier : Quantité non nulle obligatoire pour mouvement ; un mouvement (`stock_mvt`) est journalisé avant la mise à jour de `stock_available`.
+Chaque changement de stock crée d'abord un mouvement `stock_mvt`, puis met à jour `stock_available`. Cela garde la trace des mouvements en plus du stock courant.
 
-## 5. Explication du code
-- Composants : `BOStock.jsx` (parent), `BOStockUpdate.jsx` (formulaire de mise à jour), `BOStockEvolution.jsx` (historique).
-- Hooks : `useState` pour stocker la combinaison sélectionnée.
-- Services/DTO : `StockMvtService`, `StockAvailable` (présents dans le repo) pour lecture/écriture des mouvements.
+## Explication du code
+Le composant parent ne fait que coordonner les deux sous-vues. `BOStockUpdate` gère la saisie et l'écriture. `BOStockEvolution` agrège les mouvements par jour et filtre la période avec `dateFrom` / `dateTo`.
 
-## 6. Analogies
-Comme choisir une référence d'un produit dans un inventaire, puis ouvrir le registre des mouvements pour voir toutes les entrées/sorties.
+Fonctions utilisées : `fetchProductWithStock`, `getDailyMovement`, `StockAvailable.getByProductAndAttribute`, `StockMvt.save`, `StockAvailable.update`.
 
-## 7. Exemples concrets
-- Réception de 50 unités → `BOStockUpdate` crée un mouvement d'entrée → `BOStockEvolution` affiche la nouvelle ligne et la quantité physique mise à jour.
+## Analogies simples
+Comme un inventaire d'entrepôt avec deux vues : la première pour entrer ou retirer des pièces, la seconde pour lire le registre historique des entrées et sorties.
 
-## 8. Relations avec PrestaShop
-- Ressources : `stock_movements`, `stock_availables`, `products`, `combinations`.
-- Endpoints : opérations de lecture/écriture via les wrappers `entities/*` et `StockMvtService`.
+## Exemples concrets
+- Réception de 50 unités : la quantité est ajoutée, un mouvement journalier est créé et l'historique affiche l'entrée au bon jour.
+- Retrait de 3 unités sur une déclinaison : la ligne correspondante est mise à jour sans toucher aux autres variantes.
 
-## 9. Dépendances
-- `BOStockUpdate.jsx`, `BOStockEvolution.jsx`, `StockMvtService`.
+## Relations avec PrestaShop
+Ressources utilisées : `stock_movements`, `stock_availables`, `products`, `combinations`, `product_option_values`.
 
-## 10. Résumé
-- Résumé métier : Outil d'administration pour gérer et suivre les stocks par combinaison.
-- Résumé technique : State lifting entre update et evolution avec partage de `productDetails`; `StockMvtService` enrichit la vue avec réservations journalières/cumulées.
+## Dépendances
+- `src/components/BOStockUpdate.jsx`
+- `src/components/BOStockEvolution.jsx`
+- `src/backend/services/ProductService.js`
+- `src/backend/services/StockMvtService.js`
+
+## Voir aussi
+- [BOStockUpdate](components/BOStockUpdate.md)
+- [BOStockEvolution](components/BOStockEvolution.md)
+
+## Résumé
+Outil de gestion de stock centré sur un couple produit/déclinaison, avec écriture du mouvement et consultation de l'historique dans la même page.

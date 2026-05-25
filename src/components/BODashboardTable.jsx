@@ -4,20 +4,24 @@ import { useMemo } from "react"
 import { MaterialReactTable, useMaterialReactTable } from "material-react-table"
 
 /**
- * Formate un montant numerique pour affichage dashboard.
- * Parametres: value (number|string|undefined).
- * Retour: string avec 2 decimales.
+ * Formate un montant numérique en chaîne avec 2 décimales.
+ *
+ * Paramètres: `value` (number|string).
+ * Retour: string.
  */
 const formatAmount = (value) => Number(value ?? 0).toFixed(2)
 
 /**
- * Tableau reutilisable pour indicateurs journaliers BackOffice.
- * Regles metier: affiche compteur + total HT/TTC sur des lignes deja agregees par jour.
- * Parametres: rows, countHeader, countKey.
- * Retour: JSX MaterialReactTable.
+ * Composant tableau réutilisable pour le dashboard (commandes / paniers journaliers).
+ *
+ * Paramètres:
+ * - `rows` (Array): lignes du tableau.
+ * - `countHeader` (string): libellé colonne compte.
+ * - `countKey` (string): clé pour le compteur dans les lignes.
+ *
+ * Retour: JSX.
  */
 function BODashboardTable({ rows = [], countHeader = "Commandes", countKey = "ordersCount" }) {
-	// Etape 1: definir les colonnes de rendu.
 	const columns = useMemo(
 		() => [
 			{
@@ -42,7 +46,6 @@ function BODashboardTable({ rows = [], countHeader = "Commandes", countKey = "or
 		[],
 	)
 
-	// Etape 2: configurer la table (pagination + style de ligne).
 	const table = useMaterialReactTable({
 		columns,
 		data: rows,
@@ -57,7 +60,6 @@ function BODashboardTable({ rows = [], countHeader = "Commandes", countKey = "or
 		}),
 	})
 
-	// Etape 3: rendre la table material.
 	return <MaterialReactTable table={table} />
 }
 

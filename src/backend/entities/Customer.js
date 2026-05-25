@@ -199,6 +199,54 @@ class Customer {
         const address = await addressApi.getBy("idCustomer", this.id)
         return address
     }
+
+    async getExcl(excludeIds = []) {
+        const excluded = new Set()
+        for (const id of excludeIds ?? []) {
+            excluded.add(Number(id))
+        }
+        const all = await this.getAll()
+        return all.filter((o) => !excluded.has(Number(o.id)))
+    }
+
+    async getIncl(includeIds = []) {
+        const included = new Set()
+        for (const id of includeIds ?? []) {
+            included.add(Number(id))
+        }
+        const all = await this.getAll()
+        return all.filter((o) => included.has(Number(o.id)))
+    }
+
+    async getExclApi(excludeIds = []) {
+        const ids = []
+        for (const id of excludeIds ?? []) {
+            const numericId = Number(id)
+
+            if (Number.isFinite(numericId)) {
+                ids.push(numericId)
+            }
+        }
+        const filter = ids.length > 0 ? `&filter[id]=![${ids.join("|")}]` : ""
+        const xml = await api.get(`${this.endpoint}?display=full${filter}`)
+        const Customers = toJSONList(xml)
+        return Customers.map((CustomerData) => Customer.fromData(CustomerData))
+    }
+
+    async getInclApi(includeIds = []) {
+        const ids = []
+        for (const id of includeIds ?? []) {
+            const numericId = Number(id)
+
+            if (Number.isFinite(numericId)) {
+                ids.push(numericId)
+            }
+        }
+        const filter = ids.length > 0 ? `&filter[id]=[${ids.join("|")}]` : ""
+        const xml = await api.get(`${this.endpoint}?display=full${filter}`)
+        const Customers = toJSONList(xml)
+        return Customers.map((CustomerData) => Customer.fromData(CustomerData))
+    }
 }
 
 export default Customer

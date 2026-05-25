@@ -3,11 +3,13 @@ import {getDailyMovement} from "../backend/services/StockMvtService.js";
 import {MaterialReactTable, useMaterialReactTable} from "material-react-table";
 
 /**
- * Panneau d'evolution de stock par jour.
- * Regles metier: calcule entrees/sorties/net/final + reservations pour le couple produit-declinaison choisi.
- * Methode: charge les mouvements agreges puis filtre par intervalle de dates.
- * Parametres: combination [productId, productAttributeId], productDetails.
- * Retour: JSX tableau d'evolution.
+ * Composant BackOffice: affiche l'évolution journalière des mouvements de stock.
+ *
+ * Paramètres:
+ * - `combination` (Array): [productId, productAttributeId].
+ * - `productDetails` (object): détails facultatifs pour optimiser les requêtes.
+ *
+ * Retour: JSX — table des mouvements agrégés par jour et filtres de date.
  */
 function BOStockEvolution({combination, productDetails}) {
     const [productsData, setProductsData] = useState([])
@@ -16,7 +18,7 @@ function BOStockEvolution({combination, productDetails}) {
     const productId = combination[0];
     const productAttributeId = combination[1];
 
-    // Etape 1: charger l'historique journalier selon la combinaison selectionnee.
+    // appel API pour récupérer les mvts de stock des produits avec agrégation journalière
     useEffect(() => {
         const loadMovements = async () => {
             try {
@@ -30,7 +32,8 @@ function BOStockEvolution({combination, productDetails}) {
         loadMovements().then(r => console.log(r))
     }, [productId, productAttributeId, productDetails]);
 
-    // Etape 2: filtrer les lignes entre bornes inclusives (format YYYY-MM-DD).
+    // filtrage des lignes par plage de dates (les bornes sont incluses).
+    // les dates sont au format "YYYY-MM-DD", la comparaison lexicographique fait office de comparaison chronologique.
     const filteredData = useMemo(() => {
         return productsData.filter((row) => {
             if (dateFrom && row.date < dateFrom) return false
@@ -39,7 +42,6 @@ function BOStockEvolution({combination, productDetails}) {
         })
     }, [productsData, dateFrom, dateTo]);
 
-    // Etape 3: definir les colonnes metiers de suivi stock.
     const columns = useMemo(() => [
         {
             header: "Date",
@@ -75,41 +77,36 @@ function BOStockEvolution({combination, productDetails}) {
         }
     ], [])
 
-    // Etape 4: initialiser la table material react.
     const table = useMaterialReactTable({
         columns,
         data: filteredData
     })
 
-    // Etape 5: rendre filtres de date et tableau d'evolution.
     return <div>
-        <header className="mb-3">
-            <h5 className="mb-1">Evolution de stock</h5>
-            <p className="text-muted mb-0">Suivi journalier des mouvements.</p>
+        <header>
+            <h4>Evolution de stock</h4>
+            <div>
+                <label>
+                    Du
+                    <input
+                        type={"date"}
+                        value={dateFrom}
+                        max={dateTo || undefined}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                    />
+                </label>
+                <label>
+                    Au
+                    <input
+                        type={"date"}
+                        value={dateTo}
+                        min={dateFrom || undefined}
+                        onChange={(e) => setDateTo(e.target.value)}
+                    />
+                </label>
+            </div>
+            <MaterialReactTable table={table} />
         </header>
-        <div className="row g-3 mb-3">
-            <div className="col-md-6">
-                <label className="form-label">Du</label>
-                <input
-                    className="form-control"
-                    type={"date"}
-                    value={dateFrom}
-                    max={dateTo || undefined}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                />
-            </div>
-            <div className="col-md-6">
-                <label className="form-label">Au</label>
-                <input
-                    className="form-control"
-                    type={"date"}
-                    value={dateTo}
-                    min={dateFrom || undefined}
-                    onChange={(e) => setDateTo(e.target.value)}
-                />
-            </div>
-        </div>
-        <MaterialReactTable table={table} />
     </div>
 }
 

@@ -40,10 +40,21 @@ const STATE_ID = 0
 const ADDRESS_ALIAS = "Checkout"
 
 /**
- * Verifie la disponibilite stock pour les lignes d'un panier.
- * Regles metier: quantite minimum 1, prise en compte du multiplicateur de duplication.
- * Parametres: cartRows (Array), multiplicateur (number).
- * Retour: Promise<Array<{productId,productAttributeId,requested,available}>> erreurs de stock.
+ * Vérifie la disponibilité du stock pour un ensemble de lignes de panier.
+ *
+ * Paramètres:
+ * - `cartRows` (Array): tableau de lignes ({ productId, productAttributeId, quantity }).
+ * - `multiplicateur` (number): facteur appliqué aux quantités (par ex. duplication).
+ *
+ * Retour: Promise<Array<object>> — liste d'erreurs sous la forme { productId, productAttributeId, requested, available }.
+ *
+ * Règles métier:
+ * - Construit la quantité demandée = quantity * multiplicateur.
+ * - Interroge `StockAvailable.getByProductAndAttribute` pour connaître la disponibilité.
+ * - Si requested > available, ajoute une erreur.
+ *
+ * Exemple:
+ * await checkCartStock([{ productId:1, productAttributeId:0, quantity:2 }], 1)
  */
 const checkCartStock = async (cartRows = [], multiplicateur = 1) => {
     const stockApi = new StockAvailable({}, false)
@@ -51,7 +62,6 @@ const checkCartStock = async (cartRows = [], multiplicateur = 1) => {
     const factor = Math.max(1, Math.trunc(Number(multiplicateur || 1)))
 
     for (const row of cartRows ?? []) {
-        // Etape 1: normaliser les ids et quantites de la ligne.
         const productId = Number(row?.productId || 0)
         const attributeId = Number(row?.productAttributeId || 0)
         const qty = Math.max(1, Math.trunc(Number(row?.quantity || 0))) * factor
@@ -59,7 +69,6 @@ const checkCartStock = async (cartRows = [], multiplicateur = 1) => {
             continue
         }
 
-        // Etape 2: charger le stock disponible pour le couple produit/attribut.
         const stock = await stockApi.getByProductAndAttribute(productId, attributeId)
         const available = Number(stock?.quantity ?? 0)
         if (qty > available) {
@@ -76,9 +85,15 @@ const checkCartStock = async (cartRows = [], multiplicateur = 1) => {
 }
 
 /**
- * Recupere les commandes enrichies (nom client + libelle etat).
- * Parametres: aucun.
- * Retour: Promise<Array<OrderRow>>.
+ * Récupère et enrichit la liste des commandes pour affichage BO.
+ *
+ * Paramètres: aucun.
+ *
+ * Retour: Promise<Array<object>> — commandes enrichies avec `customerName` et `orderStateName`.
+ *
+ * Règles métier:
+ * - Récupère `orders`, `customers` et `orderStates` en parallèle.
+ * - Mappe les noms et états pour affichage dans la table BO.
  */
 const getOrderRows = async () => {
     const orderClass = new Order("", false)
@@ -91,7 +106,7 @@ const getOrderRows = async () => {
         orderStateClass.getAll(),
     ])
 
-    // Etape 1: construire les maps d'enrichissement pour affichage.
+    //Fanaovana map [key, value]
     const customerById = new Map(
         customers.map((customer) => [Number(customer.id), `${customer.firstname} ${customer.lastname}`.trim()])
     )
@@ -102,7 +117,6 @@ const getOrderRows = async () => {
 
     console.log("orderstates", orderStateById);
 
-    // Etape 2: fusionner les informations pour chaque commande.
     return orders.map((order) => (
         {
             ...order,
@@ -113,9 +127,12 @@ const getOrderRows = async () => {
 }
 
 /**
- * Recupere les commandes d'un client enrichies pour affichage.
- * Parametres: customerId (number|string).
- * Retour: Promise<Array<OrderRow>>.
+ * Récupère les commandes d'un client et les enrichit pour l'interface.
+ *
+ * Paramètres:
+ * - `customerId` (number): identifiant du client.
+ *
+ * Retour: Promise<Array<object>> — commandes du client enrichies.
  */
 const getOrderRowsByCustomer = async (customerId) => {
     const orderClass = new Order("", false)
@@ -130,7 +147,6 @@ const getOrderRowsByCustomer = async (customerId) => {
 
     console.log("orders for customer", customerId, orders);
 
-    // Etape 1: indexer clients et etats pour enrichissement.
     const customerById = new Map(
         customers.map((customer) => [Number(customer.id), `${customer.firstname} ${customer.lastname}`.trim()])
     );
@@ -139,7 +155,6 @@ const getOrderRowsByCustomer = async (customerId) => {
         orderStates.map((orderState) => [Number(orderState.id), orderState.name])
     );
 
-    // Etape 2: projeter les commandes avec labels utiles cote UI.
     return orders.map((order) => (
         {
             ...order,
@@ -150,10 +165,19 @@ const getOrderRowsByCustomer = async (customerId) => {
 }
 
 /**
- * Met a jour l'etat d'une commande via creation d'un historique.
- * Regles metier: newStateId et dateUpdate obligatoires.
- * Parametres: orderId, newStateId, dateUpdate.
- * Retour: Promise<{success,orderId,orderStateId,orderHistory,rawResponse}>.
+ * Change l'état d'une commande en respectant les transitions autorisées.
+ *
+ * Paramètres:
+ * - `orderId` (number): id de la commande.
+ * - `newStateId` (number): nouvel état cible.
+ * - `dateUpdate` (Date|string): date d'application de l'état.
+ *
+ * Retour: Promise<object> — { success, orderId, orderStateId, orderHistory, rawResponse }.
+ *
+ * Règles métier:
+ * - Valide la présence de `newStateId` et `dateUpdate`.
+ * - Ne permet que les transitions listées dans `allowed` (ex: "11-5", "11-6", "5-6").
+ * - Sauvegarde un `MyOrderState` en base pour historiser la transition.
  */
 const updateOrderState = async (orderId, newStateId, dateUpdate) => {
 
@@ -168,10 +192,20 @@ const updateOrderState = async (orderId, newStateId, dateUpdate) => {
     console.log("updateOrderState", { orderId, newStateId, dateUpdate });
 
     try {
-        // Etape 1: normaliser la date locale pour l'historique.
+        const orderHistoryClass = new OrderHistory("", false)
+        const histories = await orderHistoryClass.getByApi("id_order", Number(orderId))
+        const sortedHistories = [...(histories ?? [])].sort((a, b) => Number(b.id) - Number(a.id))
+        const latest = sortedHistories.length > 0 ? sortedHistories[0] : null
+        const currentStateId = latest ? Number(latest.orderStateId ?? 0) : null
+
+        const allowed = new Set(["11-5", "11-6", "5-6"])
+        const fromTo = `${currentStateId ?? "null"}-${Number(newStateId)}`
+        if (!allowed.has(fromTo)) {
+            throw new Error(`Transition de statut non autorisée: ${fromTo}`)
+        }
+
         const dateAdd = ensureLocalDateTime(dateUpdate)
 
-        // Etape 2: construire et sauvegarder l'objet de transition d'etat.
         const payload = MyOrderState.fromData({
             orderId: Number(orderId),
             orderStateId: Number(newStateId),
@@ -183,13 +217,6 @@ const updateOrderState = async (orderId, newStateId, dateUpdate) => {
 
         const res = await payload.save()
         console.log("my_order_state response", res)
-
-        // Etape 3: relire l'historique pour retourner la derniere entree creee.
-        const orderHistoryClass = new OrderHistory("", false)
-        const histories = await orderHistoryClass.getByApi("id_order", Number(orderId))
-
-        const sortedHistories = [...(histories ?? [])].sort((a, b) => Number(b.id) - Number(a.id))
-        const latest = sortedHistories.length > 0 ? sortedHistories[0] : null
 
         return {
             success: true,
@@ -204,18 +231,10 @@ const updateOrderState = async (orderId, newStateId, dateUpdate) => {
     }
 }
 
-/**
- * Cree une ou plusieurs commandes a partir d'un panier.
- * Regles metier: verifie le stock avant creation; clone genere des commandes supplementaires.
- * Parametres: cart, customerId, date, clone.
- * Retour: Promise<Array<{cart,order}>>.
- */
 const createOrderFromCart = async (cart, customerId, date, clone = 0) => {
-    // Etape 1: determiner le nombre total de commandes a creer.
     const cloneCount = Math.max(0, Math.trunc(Number(clone)))
     const totalOrders = cloneCount + 1
 
-    // Etape 2: verifier la disponibilite stock pour l'ensemble des creations.
     const stockErrors = await checkCartStock(cart.cartRows, totalOrders)
 
     if (stockErrors.length > 0) {
@@ -228,14 +247,12 @@ const createOrderFromCart = async (cart, customerId, date, clone = 0) => {
         throw new Error(`Stock insuffisant: ${message}`)
     }
 
-    // Etape 3: charger le client pour valider son existence puis normaliser la date.
     const customerApi = new Customer({}, false)
     await customerApi.getById(customerId)
 
     const dateUsed = ensureLocalDateTime(date)
     const results = []
 
-    // Etape 4: calculer les totaux de la commande source.
     const originalTotals = await OrderPayload.computeOrderTotals(cart.cartRows)
 
     const commonOrderData = {
@@ -258,7 +275,6 @@ const createOrderFromCart = async (cart, customerId, date, clone = 0) => {
         totalWrappingTaxExcl: 0,
     }
 
-    // Etape 5: creer la commande originale depuis le panier courant.
     const originalPayload = OrderPayload.fromCart(cart, {
         ...commonOrderData,
         totalPaid: originalTotals.totalTtc,
@@ -277,7 +293,6 @@ const createOrderFromCart = async (cart, customerId, date, clone = 0) => {
         order: savedOriginalOrder
     })
 
-    // Etape 6: creer les clones (nouveau panier + nouvelle commande pour chaque clone).
     for (let i = 0; i < cloneCount; i++) {
         const newCart = new Cart({
             customerId,
@@ -329,14 +344,8 @@ const createOrderFromCart = async (cart, customerId, date, clone = 0) => {
     return results
 }
 
-/**
- * Duplique le panier d'une commande existante via CartService.
- * Parametres: orderId, multiplicateur, dateUpdate.
- * Retour: Promise<{success:boolean, cart:any, orderId:number}>.
- */
 const duplicateCart = async (orderId, multiplicateur, dateUpdate) => {
     try {
-        // Etape 1: retrouver la commande puis le panier associe.
         const orderClass = new Order("", false)
         const order = await orderClass.getById(Number(orderId))
         let cart = null
@@ -346,7 +355,6 @@ const duplicateCart = async (orderId, multiplicateur, dateUpdate) => {
             cart = await cartClass.getById(Number(order.cartId))
         }
 
-        // Etape 2: deleguer la duplication metier au service panier.
         CartService.duplicateCart(cart, multiplicateur, dateUpdate);
 
         console.log("aaaaaaaaaaaaa", cart, " a la date ", dateUpdate, " avec multiplicateur ", multiplicateur, " et orderId ", orderId);
@@ -357,11 +365,6 @@ const duplicateCart = async (orderId, multiplicateur, dateUpdate) => {
     }
 }
 
-/**
- * Variante utilitaire: creation de commande a partir d'un cartId.
- * Parametres: cartId, customerId, date, clone.
- * Retour: Promise<Array<{cart,order}>>.
- */
 const createOrderFromCartId = async (cartId, customerId, date, clone = 0) => {
     const cartClass = new Cart({}, false);
     const cart = await cartClass.getById(Number(cartId));

@@ -4,11 +4,14 @@ import BOOrderRow from "../components/BOOrderRow";
 import { formatDateInput } from "../backend/utils/utils"
 
 /**
- * Page BackOffice de gestion des commandes.
- * Regles metier: permet de modifier manuellement l'etat d'une commande avec date de mise a jour.
- * Methode: charge les commandes puis envoie les changements via le service metier.
- * Parametres: aucun.
- * Retour: JSX de la liste de commandes.
+ * Page BackOffice: liste et modification des commandes.
+ *
+ * Paramètres: aucun.
+ * Retour: JSX — table des commandes avec contrôles d'état.
+ *
+ * Règles métier:
+ * - Utilise `orderService.updateOrderState` pour appliquer les transitions autorisées.
+ * - Affiche un message récapitulatif après action.
  */
 function BOOrderList() {
     const [orders, setOrders] = useState([]);
@@ -21,9 +24,10 @@ function BOOrderList() {
     });
 
     /**
-     * Met a jour l'etat local d'edition pour une commande cible.
-     * Parametres: orderId (number) puis evenement de formulaire.
-     * Retour: void.
+     * Gère les changements des champs d'édition pour une commande spécifique.
+     *
+     * Paramètres: `orderId` (number) — identifiant de la commande.
+     * Retour: function — handler d'événement `onChange`.
      */
     const handleChange = (orderId) => (e) => {
         const { name, value } = e.target;
@@ -35,24 +39,21 @@ function BOOrderList() {
         }));
     };
 
-	/**
-	 * Enregistre la modification d'etat d'une commande.
-	 * Regles metier: impose un etat cible et une date; fallback sur valeurs existantes de la commande.
-	 * Parametres: orderId (number|string).
-	 * Retour: Promise<void>.
-	 */
+    /**
+     * Applique la modification d'état demandée pour une commande.
+     *
+     * Paramètres: `orderId` (number).
+     * Retour: Promise<void> — met à jour `actionResult`.
+     */
     const handleClick = async (orderId) => {
-		// Etape 1: retrouver la commande courante et calculer les valeurs effectives.
         const currentOrder = orders.find((order) => Number(order.id) === Number(orderId))
         const newStateId = edit.orderStateId || currentOrder?.currentState || ""
         const dateUpdate = edit.dateUpdate || formatDateInput(currentOrder?.dateUpd) || formatDateInput(currentOrder?.dateAdd)
 
         try {
-			// Etape 2: appeler le service de transition d'etat et stocker le resultat.
             const result = await orderService.updateOrderState(orderId, newStateId, dateUpdate);
             setActionResult(result);
         } catch (error) {
-			// Etape 3: transformer l'erreur en objet d'etat affichable a l'utilisateur.
             console.log("Erreur lors de la modification de l'état de la commande", error);
             setActionResult({
                 success: false,
@@ -62,7 +63,6 @@ function BOOrderList() {
             });
         }
 
-	// Etape 4: log de trace pour diagnostic local.
         console.log(
             "Modifier la commande " +
                 orderId +
@@ -74,7 +74,6 @@ function BOOrderList() {
     };
 
     useEffect(()=>{
-		// Etape 5: chargement initial de la liste des commandes BackOffice.
         const loadOrders = async () =>{
             setIsLoading(true);
             try {
@@ -90,36 +89,27 @@ function BOOrderList() {
     
 
     return(
-        <div className="d-flex flex-column gap-4">
-            <div>
-                <h4 className="mb-1">Commandes</h4>
-                <p className="text-muted mb-0">Mise a jour des etats et suivi des commandes.</p>
-            </div>
+        <>
+            <h1>Liste de tous les commandes</h1>
             {actionResult && (
-                <div className={`alert ${actionResult.success ? "alert-success" : "alert-danger"}`} role="alert">
+                <div style={{ marginBottom: "20px", padding: "10px", border: "1px solid", backgroundColor: actionResult.success ? "#d4edda" : "#f8d7da", color: actionResult.success ? "#155724" : "#721c24" }}>
                     {actionResult.success ? (
-                        <>Commande {actionResult.orderId} mise a jour avec succes a l'etat {actionResult.orderStateId}. Dernier historique : {actionResult.orderHistory ? `ID ${actionResult.orderHistory.id} a ${actionResult.orderHistory.dateAdd}` : "Aucun historique trouve"}.</>
+                        <>Commande {actionResult.orderId} mise à jour avec succès à l'état {actionResult.orderStateId}. Dernier historique : {actionResult.orderHistory ? `ID ${actionResult.orderHistory.id} à ${actionResult.orderHistory.dateAdd}` : "Aucun historique trouvé"}.</>
                     ) : (
-                        <>Erreur lors de la mise a jour de la commande {actionResult.orderId} : {actionResult.error}</>
+                        <>Erreur lors de la mise à jour de la commande {actionResult.orderId} : {actionResult.error}</>
                     )}
                 </div>
             )}
-            <div className="card">
-                <div className="card-body">
-                    {isLoading ? (
-                        <p className="text-muted">Chargements des clients</p>
-                    ) : (
-                        <BOOrderRow
-                            title=""
-                            rows={orders}
-                            edit={edit}
-                            onChange={handleChange}
-                            onClick={handleClick}
-                        />
-                    )}
-                </div>
-            </div>
-        </div>
+            {isLoading ? (<p>Chargements des clients</p>) : (
+                <BOOrderRow
+                    title="Commandes"
+                    rows={orders}
+                    edit={edit}
+                    onChange={handleChange}
+                    onClick={handleClick}
+                />
+            )}
+        </>
     )
 
 }

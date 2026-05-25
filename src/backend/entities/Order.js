@@ -1,6 +1,6 @@
 import api from "../utils/api"
 import {toJSON, toJSONList, toXML} from "../xml/orderXML.js"
-import { buildApiFilterQuery, toDate, formatDateTime } from "../utils/utils"
+import { buildApiFilterQuery, toDate, formatDateTime, isDateInRange } from "../utils/utils"
 import OrderHistory from "./OrderHistory.js"
 import OrderPayment from "./OrderPayment.js"
 
@@ -108,26 +108,9 @@ class Order {
         const minDate = toDate(dateMin ?? "")
         const maxDate = toDate(dateMax ?? "")
 
-        return orders.filter((order) => {
-            const orderDate = toDate(order?.dateAdd ?? "")
-            if (!(orderDate instanceof Date) || Number.isNaN(orderDate.getTime())) {
-                return false
-            }
-
-            if (minDate instanceof Date && !Number.isNaN(minDate.getTime())) {
-                const minBound = new Date(minDate)
-                minBound.setHours(0, 0, 0, 0)
-                if (orderDate < minBound) return false
-            }
-
-            if (maxDate instanceof Date && !Number.isNaN(maxDate.getTime())) {
-                const maxBound = new Date(maxDate)
-                maxBound.setHours(23, 59, 59, 999)
-                if (orderDate > maxBound) return false
-            }
-
-            return true
-        })
+        return orders.filter((order) =>
+            isDateInRange(toDate(order?.dateAdd ?? ""), minDate, maxDate)
+        )
     }
 
     async save() {

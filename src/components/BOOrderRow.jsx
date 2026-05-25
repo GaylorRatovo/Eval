@@ -1,47 +1,52 @@
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { MaterialReactTable, useMaterialReactTable } from "material-react-table"
 import { formatDateInput, formatDateTime } from "../backend/utils/utils"
 
+/**
+ * Validator placeholder pour `propTypes` dans ce projet prototype.
+ */
 const noopValidator = () => null
 
 /**
- * Cellule d'action pour mise a jour d'etat de commande.
- * Regles metier: propose seulement les transitions configurees (livre/annule) et une date.
- * Parametres: cell, table (meta contient edit/onChange/onClick).
- * Retour: JSX controls d'action.
+ * Cellule personnalisée affichant les contrôles d'action pour une ligne commande.
+ *
+ * Paramètres:
+ * - `cell` (object): cellule MaterialReactTable.
+ * - `table` (object): instance de table.
+ *
+ * Retour: JSX — select état, date et bouton d'application.
  */
 function OrderActionCell({ cell, table }) {
-    // Etape 1: extraire les metadonnees de la table et identifier la ligne courante.
     const meta = table?.options?.meta ?? {}
     const row = cell.row
     const rowId = Number(row.original?.id ?? 0)
-    const isSelected = Number(meta.edit?.orderId ?? 0) === rowId
+    const edit = meta.editRef?.current ?? null
+    const isSelected = Number(edit?.orderId ?? 0) === rowId
     const currentStateId = row.original?.currentState ?? ""
     const baseDate = formatDateInput(row.original?.dateUpd || row.original?.dateAdd)
 
-    // Etape 2: determiner les valeurs affichees (edition active ou fallback valeurs courantes).
-    const dateValue = isSelected ? (meta.edit?.dateUpdate || baseDate) : baseDate
+    const dateValue = isSelected ? (edit?.dateUpdate || baseDate) : baseDate
 
     return (
-        <div className="d-flex flex-wrap gap-2 align-items-center">
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
             <select
-                className="form-select form-select-sm"
                 name="orderStateId"
-                onChange={meta.onChange?.(rowId)}
-                value={isSelected ? (meta.edit?.orderStateId ?? currentStateId) : currentStateId}
+                onChange={meta.onChangeRef?.current?.(rowId)}
+                value={isSelected ? (edit?.orderStateId ?? currentStateId) : currentStateId}
+                style={{ padding: "4px" }}
             >
-                <option value="">Selectionner un etat</option>
-                <option value="5">Livre</option>
-                <option value="6">Annule</option>
+                <option value="">Sélectionner un état</option>
+                <option value="5">Livré</option>
+                <option value="6">Annulé</option>
             </select>
             <input
-                className="form-control form-control-sm"
                 type="date"
                 name="dateUpdate"
-                onChange={meta.onChange?.(rowId)}
+                onChange={meta.onChangeRef?.current?.(rowId)}
                 value={dateValue}
+                style={{ padding: "4px" }}
             />
-            <button className="btn btn-sm btn-primary" type="button" onClick={() => meta.onClick?.(rowId)}>
+            <button type="button" onClick={() => meta.onClickRef?.current?.(rowId)} style={{ padding: "4px 8px" }}>
                 Modifier
             </button>
         </div>
@@ -49,9 +54,16 @@ function OrderActionCell({ cell, table }) {
 }
 
 /**
- * Tableau BackOffice des commandes avec edition inline des etats.
- * Parametres: rows, edit, onChange, onClick, title.
- * Retour: JSX section + MaterialReactTable.
+ * Composant tableau des commandes utilisé dans le BackOffice.
+ *
+ * Paramètres:
+ * - `rows` (Array): lignes de commande.
+ * - `edit` (object): état d'édition courant.
+ * - `onChange` (function): handler pour changements de champs.
+ * - `onClick` (function): handler pour action de modification.
+ * - `title` (string): titre optionnel.
+ *
+ * Retour: JSX — section contenant la MaterialReactTable configurée.
  */
 function BOOrderRow({
     rows = [],
@@ -60,10 +72,32 @@ function BOOrderRow({
     onClick,
     title = "",
 }) {
-    // Etape 1: securiser les donnees d'entree avant affichage.
-    const safeRows = Array.isArray(rows) ? rows.filter(Boolean) : []
+    const safeRows = useMemo(() => (Array.isArray(rows) ? rows.filter(Boolean) : []), [rows])
+    const editRef = useRef(edit)
+    const onChangeRef = useRef(onChange)
+    const onClickRef = useRef(onClick)
 
-    // Etape 2: definir les colonnes metier de la table commandes.
+    useEffect(() => {
+        editRef.current = edit
+    }, [edit])
+
+    useEffect(() => {
+        onChangeRef.current = onChange
+    }, [onChange])
+
+    useEffect(() => {
+        onClickRef.current = onClick
+    }, [onClick])
+
+    const tableMeta = useMemo(
+        () => ({
+            editRef,
+            onChangeRef,
+            onClickRef,
+        }),
+        [],
+    )
+
     const columns = useMemo(
         () => [
             {
@@ -97,15 +131,10 @@ function BOOrderRow({
         [],
     )
 
-    // Etape 3: configurer la table avec meta callbacks pour la cellule action.
     const table = useMaterialReactTable({
         columns,
         data: safeRows,
-        meta: {
-            edit,
-            onChange,
-            onClick,
-        },
+        meta: tableMeta,
         enablePagination: true,
         initialState: {
             pagination: { pageIndex: 0, pageSize: 10 },
@@ -117,10 +146,9 @@ function BOOrderRow({
         }),
     })
 
-    // Etape 4: rendre le composant table.
     return (
         <section>
-            {title ? <h3 className="mb-3">{title}</h3> : null}
+            {title ? <h3>{title}</h3> : null}
             <MaterialReactTable table={table} />
         </section>
     )

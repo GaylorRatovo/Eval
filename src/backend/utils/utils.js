@@ -38,6 +38,34 @@ export const toDate = (value) => {
     return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
+/**
+ * Vérifie qu'une date tombe dans une plage inclusive jour entier.
+ * minDate est ramenée à 00:00:00 et maxDate à 23:59:59 pour couvrir la journée complète.
+ * @param {Date} date
+ * @param {Date|null} minDate
+ * @param {Date|null} maxDate
+ * @returns {boolean}
+ */
+export const isDateInRange = (date, minDate, maxDate) => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+        return false
+    }
+
+    if (minDate instanceof Date && !Number.isNaN(minDate.getTime())) {
+        const minBound = new Date(minDate)
+        minBound.setHours(0, 0, 0, 0)
+        if (date < minBound) return false
+    }
+
+    if (maxDate instanceof Date && !Number.isNaN(maxDate.getTime())) {
+        const maxBound = new Date(maxDate)
+        maxBound.setHours(23, 59, 59, 999)
+        if (date > maxBound) return false
+    }
+
+    return true
+}
+
 export const getLanguageText = (entityDoc, tag, langId = "1") => {
     if (!entityDoc) return ""
     const langSelector = `${tag} > language[id="${langId}"]`

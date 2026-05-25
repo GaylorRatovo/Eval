@@ -1,4 +1,4 @@
-import { toDate, buildMapById } from "../utils/utils.js";
+import { toDate, buildMapById, isDateInRange } from "../utils/utils.js";
 
 export default class OrderWithDetails {
     /**
@@ -61,25 +61,8 @@ export default class OrderWithDetails {
         const minDate = toDate(dateMin ?? "")
         const maxDate = toDate(dateMax ?? "")
 
-        return list.filter((item) => {
-            const orderDate = toDate(item?.order?.dateAdd ?? "")
-            if (!(orderDate instanceof Date) || Number.isNaN(orderDate.getTime())) {
-                return false
-            }
-
-            if (minDate instanceof Date && !Number.isNaN(minDate.getTime())) {
-                const minBound = new Date(minDate)
-                minBound.setHours(0, 0, 0, 0)
-                if (orderDate < minBound) return false
-            }
-
-            if (maxDate instanceof Date && !Number.isNaN(maxDate.getTime())) {
-                const maxBound = new Date(maxDate)
-                maxBound.setHours(23, 59, 59, 999)
-                if (orderDate > maxBound) return false
-            }
-
-            return true
-        })
+        return list.filter((item) =>
+            isDateInRange(toDate(item?.order?.dateAdd ?? ""), minDate, maxDate)
+        )
     }
 }

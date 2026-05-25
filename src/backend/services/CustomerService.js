@@ -8,10 +8,22 @@ const CustomerService = {
     DEFAULT_COUNTRY_ID: 8,
 
     /**
-     * Associe un client existant a un panier invite.
-     * Regles metier: le client doit avoir au moins une adresse.
-     * Parametres: cart, customer.
-     * Retour: Promise<{cart, customer, address}>.
+     * Associe un client existant à un panier (connexion client -> panier).
+     *
+     * Paramètres:
+     * - `cart` (Cart): panier à mettre à jour.
+     * - `customer` (Customer|object): client existant ou objet partiel contenant `id`.
+     *
+     * Retour: Promise<{cart: Cart, customer: Customer, address: Address}> — panier et client mis à jour.
+     *
+     * Règles métier:
+     * - Vérifie que le panier existe (`cart.id`).
+     * - Recharge le client via l'API si `customer.id` est fourni.
+     * - Récupère la première adresse disponible; si aucune, l'opération échoue.
+     * - Délègue la mise à jour à `CartService.updateCartForCustomer`.
+     *
+     * Exemple:
+     * await CustomerService.connectCustomerToCart(cart, { id: 5 })
      */
     async connectCustomerToCart(cart, customer) {
         if (!cart?.id) {
@@ -31,10 +43,22 @@ const CustomerService = {
     },
 
     /**
-     * Cree un nouveau client + adresse puis associe ce client au panier.
-     * Regles metier: creation compte client non invite (isGuest=0).
-     * Parametres: cart, form, options.
-     * Retour: Promise<{cart, customer, address}>.
+     * Crée un client (et son adresse) puis l'associe au panier fourni.
+     *
+     * Paramètres:
+     * - `cart` (Cart): panier à rattacher.
+     * - `form` (object): champs attendus { firstname, lastname, email, password, address1, postcode, city }.
+     * - `options` (object): options facultatives (ex: countryId).
+     *
+     * Retour: Promise<{cart: Cart, customer: Customer, address: Address}> — objets créés et panier mis à jour.
+     *
+     * Règles métier:
+     * - Vérifie que le panier existe.
+     * - Crée le client avec `isGuest=0` et valeurs par défaut PrestaShop.
+     * - Crée une adresse liée au client et l'utilise pour mettre à jour le panier.
+     *
+     * Exemple:
+     * await CustomerService.registerCustomerForCart(cart, { firstname: 'A', lastname: 'B', email: 'a@b.c', password: 'pwd', address1: 'Rue', postcode: '75000', city: 'Paris' })
      */
     async registerCustomerForCart(cart, form, options = {}) {
         if (!cart?.id) {

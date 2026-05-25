@@ -1,50 +1,48 @@
 # BOReset
 
-## 1. Présentation générale
-- Rôle : Interface pour supprimer en masse des ressources PrestaShop (utilisé pour réinitialiser un environnement de test).
-- Problème métier : Rapide nettoyage d'une boutique de développement/test.
-- Utilisateurs : Développeurs, intégrateurs, administrateurs de test.
+## Présentation générale
+`BOReset.jsx` permet de supprimer en masse des ressources PrestaShop pour remettre à zéro un environnement de test ou de démonstration. C'est un outil de maintenance, pas une fonctionnalité métier classique.
 
-## 2. Fonctionnement utilisateur
-1. L'utilisateur coche les ressources à supprimer (liste `RESOURCES_TO_RESET`).
-2. Il peut sélectionner/désélectionner tout.
-3. En cliquant sur «Valider», `deleteAll(selected)` appelle l'API pour effacer les ressources sélectionnées.
+## Fonctionnement utilisateur
+1. L'utilisateur coche les ressources à supprimer.
+2. Il peut tout sélectionner ou tout désélectionner.
+3. `deleteAll(selected)` est appelé au clic sur `Valider`.
+4. Les suppressions sont réalisées dans l'ordre défini dans `RESOURCES_TO_RESET`.
 
-## 3. Flux de données
+## Flux de données
 Utilisateur
     ↓
-`BOReset.jsx` (Set `selected`)
+`BOReset.jsx`
     ↓
-Service `Reset.deleteAll(selected)`
+`deleteAll(selected)`
     ↓
-Utilitaire `api.deleteAll(resource, protectedIds)` exécute les suppressions via l'API.
+`api.deleteAll(resource, protectedIds)`
+    ↓
+Suppression des collections PrestaShop avec exclusions des IDs protégés
 
-## 4. Logique métier
-- Quoi : Supprimer des collections d'objets dans un ordre défini (order property dans `RESOURCES_TO_RESET`).
-- Comment : `deleteAll` itère et appelle `api.deleteAll` pour chaque ressource, en respectant `PROTECTED_IDS`.
-- Pourquoi : Remise à zéro d'un environnement de test.
-- Quand : À la demande explicite de l'utilisateur.
+## Logique métier
+Le composant transforme la liste des ressources à supprimer en `Set`, puis applique un tri métier pour conserver l'ordre de nettoyage. La protection des IDs critiques empêche la suppression d'objets nécessaires au fonctionnement minimal de la boutique.
 
-Vérifications métier : liste `PROTECTED_IDS` pour empêcher la suppression d'IDs critiques (ex : catégories racines, client admin).
+## Explication du code
+`useMemo` prépare une map ordonnée des ressources. `toggleItem` ajoute ou retire une ressource du `Set`. `toggleAll` bascule entre aucune sélection et toute la liste. `doDelete` appelle le service de suppression.
 
-## 5. Explication du code
-- Composant : `BOReset.jsx` — affichage des ressources, sélection et confirmation.
-- Services : `Reset.js` — liste `RESOURCES_TO_RESET`, `PROTECTED_IDS`, et `deleteAll`.
-- Utilitaires : `api.deleteAll` pour effectuer la suppression côté backend/API.
+Fonctions et constantes : `RESOURCES_TO_RESET`, `PROTECTED_IDS`, `deleteAll`.
 
-## 6. Analogies
-Comme un bouton de réinitialisation d'une base de données de test qui efface des tables choisies.
+## Analogies simples
+Comme vider un atelier en retirant les outils rangés sur une liste, tout en laissant en place les équipements indispensables.
 
-## 7. Exemples concrets
-- Sélectionner `orders`, `order_histories`, `order_details` → Valider → La boutique de test est vidée des commandes.
+## Exemples concrets
+- Supprimer `orders`, `order_details` et `order_histories` pour repartir sur une boutique de test vide.
 
-## 8. Relations avec PrestaShop
-- Ressources : `orders`, `order_details`, `customers`, `products`, `stock_movements`, `categories`, etc.
-- Endpoints : suppression en masse via `api.deleteAll` (wrapper autour des appels API REST/ORM).
+## Relations avec PrestaShop
+Ressources possibles : `orders`, `order_details`, `customers`, `addresses`, `products`, `categories`, `stock_movements`, `images`, `taxes`, `tax_rules`, `tax_rule_groups`.
 
-## 9. Dépendances
-- `Reset.js`, `api` utilitaire, `RESOURCES_TO_RESET`.
+## Dépendances
+- `src/backend/services/Reset.js`
+- `src/backend/utils/api.js`
 
-## 10. Résumé
-- Résumé métier : Outil de nettoyage d'environnement.
-- Résumé technique : Supprime des ressources en respectant des IDs protégés ; dangereux en production.
+## Voir aussi
+- [Reset](services/Reset.md)
+
+## Résumé
+Outil dangereux mais utile pour les environnements de test, avec une protection explicite des données critiques.

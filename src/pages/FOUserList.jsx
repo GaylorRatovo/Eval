@@ -3,14 +3,32 @@ import Customer from "../backend/entities/Customer.js";
 import FOUserRow from "../components/FOUserRow.jsx";
 import useLocalStorage from "../hooks/useLocalStorage.jsx";
 import CustomerService from "../backend/services/CustomerService.js";
-import {Link, useNavigate} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 
 /**
- * Page de selection d'utilisateur FrontOffice.
- * Regles metier: autorise connexion client reel ou mode anonyme (guest).
- * Methode: charge la liste clients, puis stocke le contexte user dans localStorage.
- * Parametres: aucun.
- * Retour: JSX de selection utilisateur.
+ * Page FrontOffice de sélection et connexion d'un client.
+ *
+ * Paramètres:
+ * - Aucun.
+ *
+ * Type de résultat:
+ * - JSX.Element. Rend une liste de clients et une option de connexion anonyme.
+ *
+ * Ce que fait la fonction:
+ * - Charge les clients sélectionnables.
+ * - Permet de se connecter comme client existant ou comme invité.
+ *
+ * Règles métier:
+ * - Les clients anonymes sont exclus de la liste.
+ * - La connexion anonyme utilise l'identifiant réservé du client anonyme.
+ *
+ * Fonctionnement:
+ * - La liste est chargée au montage.
+ * - Les boutons mettent à jour le contexte utilisateur dans le stockage local.
+ *
+ * Exemple d'utilisation:
+ * - Input: `<FOUserList />`
+ * - Output attendu: table de clients et bouton de connexion anonyme.
  */
 function FOUserList() {
     const [customers, setCustomers] = useState([]);
@@ -19,14 +37,38 @@ function FOUserList() {
     const [isGuest, setIsGuest] = useLocalStorage("isGuest", false);
     const navigate = useNavigate();
 
+    const ANONYMOUS_CUSTOMER_ID = [1,2];
+
     useEffect(() => {
-        // Etape 1: charger les clients disponibles pour connexion FO.
+        /**
+         * Charge la liste des clients en excluant les clients anonymes.
+         *
+         * Paramètres:
+         * - Aucun.
+         *
+         * Type de résultat:
+         * - Promise<void>. Met à jour `customers`.
+         *
+         * Ce que fait la fonction:
+         * - Récupère les clients depuis le backend.
+         * - Les stocke dans l'état local pour affichage.
+         *
+         * Règles métier:
+         * - Les identifiants anonymes ne doivent jamais être proposés à la connexion classique.
+         *
+         * Fonctionnement:
+         * - Le service client est interrogé puis la réponse alimente la table.
+         *
+         * Exemple d'utilisation:
+         * - Input: ouverture de la page.
+         * - Output attendu: liste des clients affichables.
+         */
         async function loadCustomers() {
             setIsLoading(true);
 
             try {
                 const customer = new Customer({}, false);
-                const data = await customer.getAllFiltered();
+                const data = await customer.getExclApi(ANONYMOUS_CUSTOMER_ID);
 
                 setCustomers(data);
                 setIsLoading(false);
@@ -40,7 +82,28 @@ function FOUserList() {
     }, []);
 
     /**
-     * Connecte un client connu et redirige vers le catalogue.
+     * Connecte l'application en tant que client sélectionné.
+     *
+     * Paramètres:
+     * - `customer` (object): client choisi.
+     *
+     * Type de résultat:
+     * - void.
+     *
+     * Ce que fait la fonction:
+     * - Met à jour l'utilisateur courant.
+     * - Désactive le mode invité.
+     * - Redirige vers la liste des produits.
+     *
+     * Règles métier:
+     * - La connexion classique doit sortir du mode invité.
+     *
+     * Fonctionnement:
+     * - L'état local est mis à jour puis la navigation se fait vers le front office produit.
+     *
+     * Exemple d'utilisation:
+     * - Input: clic sur "Se connecter" pour un client donné.
+     * - Output attendu: stockage du client et navigation vers `/fo/products`.
      */
     const connectCustomer = (customer) => {
         setUser(customer);
@@ -49,7 +112,28 @@ function FOUserList() {
     }
     
     /**
-     * Connecte en mode anonyme et redirige vers le catalogue.
+     * Connecte l'application en mode invité.
+     *
+     * Paramètres:
+     * - Aucun.
+     *
+     * Type de résultat:
+     * - void.
+     *
+     * Ce que fait la fonction:
+     * - Stocke l'identifiant anonyme comme utilisateur courant.
+     * - Active le mode invité.
+     * - Redirige vers la liste des produits.
+     *
+     * Règles métier:
+     * - Le mode invité doit être explicitement enregistré dans le stockage local.
+     *
+     * Fonctionnement:
+     * - Le client anonyme est enregistré puis la navigation est déclenchée.
+     *
+     * Exemple d'utilisation:
+     * - Input: clic sur "Connexion anonyme".
+     * - Output attendu: `isGuest` passe à `true` et l'utilisateur arrive sur `/fo/products`.
      */
     const connectGuest = () => {
         setUser({id: CustomerService.ANONYMOUS_ID});
@@ -57,73 +141,35 @@ function FOUserList() {
         navigate('/fo/products')
     }
 
-    return (
-        <div className="row g-4">
-            <div className="col-lg-4">
-                <div className="card h-100">
-                    <div className="card-body">
-                        <h4 className="mb-2">Bienvenue sur Sneat Shop</h4>
-                        <p className="text-muted">
-                            Choisissez un compte client pour continuer vos achats ou passez en mode invite.
-                        </p>
-
-                        <div className="d-grid gap-2">
-                            <button className="btn btn-primary" type="button" onClick={() => connectGuest()}>
-                                Continuer en invite
-                            </button>
-                            <Link className="btn btn-outline-secondary" to="/">
-                                Aller au BackOffice
-                            </Link>
-                        </div>
-
-                        <hr />
-
-                        <div className="d-flex align-items-center gap-2">
-                            <span className="badge bg-label-primary">Acces rapide</span>
-                            <span className="text-muted">Catalogue, panier, commandes</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="col-lg-8">
-                <div className="card">
-                    <div className="card-header d-flex align-items-center justify-content-between">
-                        <h5 className="mb-0">Se connecter avec un client</h5>
-                        <span className="badge bg-label-secondary">{customers.length} comptes</span>
-                    </div>
-                    <div className="card-body">
-                        {isLoading ? (
-                            <p className="text-muted">Chargements des clients</p>
-                        ) : (
-                            <div className="table-responsive">
-                                <table className="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Firstname</th>
-                                            <th>Lastname</th>
-                                            <th>Email</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {customers.map(customer => (
-                                            <FOUserRow
-                                                key={customer.id}
-                                                customer={customer}
-                                                onClick={() => connectCustomer(customer)}
-                                            />
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+    return <>
+        <h1>Se connecter avec un client</h1>
+        <button type={"button"} onClick={() => connectGuest()}>
+            Connexion anonyme
+        </button>
+        {isLoading ? (<p>Chargements des clients</p>) : (
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Firstname</th>
+                    <th>Lastname</th>
+                    <th>Email</th>
+                    <th>Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                {
+                    customers.map(customer =>
+                        <FOUserRow
+                            key={customer.id}
+                            customer={customer}
+                            onClick={() => connectCustomer(customer)}
+                        />)
+                }
+                </tbody>
+            </table>)
+        }
+    </>
 }
 
 export default FOUserList;

@@ -8,11 +8,32 @@ import CustomerService from "../backend/services/CustomerService.js";
 import FOUserRow from "../components/FOUserRow.jsx";
 
 /**
- * Page de finalisation pour utilisateur invite.
- * Regles metier: l'invite doit etre rattache a un client reel (connexion ou creation) avant commande.
- * Methode: propose mode login/register puis cree la commande depuis le panier actif.
- * Parametres: aucun.
- * Retour: JSX du tunnel de finalisation.
+ * Page FrontOffice de checkout invité et de création de compte depuis le panier.
+ *
+ * Paramètres:
+ * - Aucun. Le composant utilise l'utilisateur courant, le panier actif et un formulaire local.
+ *
+ * Type de résultat:
+ * - JSX.Element. Rend soit une liste de clients à sélectionner, soit un formulaire d'inscription.
+ *
+ * Ce que fait la fonction:
+ * - Gère le parcours invité jusqu'à la validation de la commande.
+ * - Permet soit de lier un client existant au panier, soit d'en créer un nouveau.
+ *
+ * Règles métier:
+ * - La page n'est accessible que pour un utilisateur marqué invité.
+ * - Les clients anonymes sont exclus de la sélection.
+ * - Tous les champs du formulaire sont obligatoires avant création du compte.
+ * - La commande n'est confirmée que si le panier et le client existent.
+ *
+ * Fonctionnement:
+ * - Le composant vérifie d'abord les flags de session et redirige si nécessaire.
+ * - Il charge le panier actif puis les clients filtrés.
+ * - Les handlers gèrent la connexion, l'inscription et la confirmation de commande.
+ *
+ * Exemple d'utilisation:
+ * - Input: un utilisateur connecté en mode invité avec un panier actif.
+ * - Output attendu: écran de finalisation permettant de se connecter à un client ou de créer un compte.
  */
 function FOGuestCheckout() {
     const [user, setUser] = useLocalStorage("user", null);
@@ -35,10 +56,11 @@ function FOGuestCheckout() {
         city: "",
     });
 
+    const ANONYMOUS_CUSTOMER_ID = [1,2];
+
     const navigate = useNavigate();
 
     useEffect(() => {
-        // Etape 1: proteger la route et charger le panier actif invite.
         if (!user?.id) {
             navigate("/fo");
             return;
@@ -48,6 +70,29 @@ function FOGuestCheckout() {
             return;
         }
 
+        /**
+         * Charge le dernier panier actif du client courant.
+         *
+         * Paramètres:
+         * - Aucun.
+         *
+         * Type de résultat:
+         * - Promise<void>. Met à jour `cart` et `isLoading`.
+         *
+         * Ce que fait la fonction:
+         * - Récupère le dernier panier du client.
+         * - Vérifie qu'il est actif avant de l'afficher.
+         *
+         * Règles métier:
+         * - Sans panier actif, l'utilisateur ne peut pas finaliser la commande.
+         *
+         * Fonctionnement:
+         * - Appel au service panier puis contrôle de l'état actif.
+         *
+         * Exemple d'utilisation:
+         * - Input: composant chargé pour un client invité ayant un panier actif.
+         * - Output attendu: `cart` rempli avec le panier courant.
+         */
         const loadCart = async () => {
             try {
                 setIsLoading(true);
@@ -74,11 +119,33 @@ function FOGuestCheckout() {
     }, [isGuest, navigate, user?.id]);
 
     useEffect(() => {
-        // Etape 2: charger les clients existants seulement en mode login.
+        /**
+         * Charge la liste de clients filtrée pour la sélection lors de la connexion invitée.
+         *
+         * Paramètres:
+         * - Aucun.
+         *
+         * Type de résultat:
+         * - Promise<void>. Met à jour `customers`.
+         *
+         * Ce que fait la fonction:
+         * - Récupère les clients depuis l'API.
+         * - Exclut les clients anonymes et les comptes invités.
+         *
+         * Règles métier:
+         * - La liste proposée doit contenir uniquement de vrais clients sélectionnables.
+         *
+         * Fonctionnement:
+         * - Les données sont récupérées puis filtrées avant d'être stockées localement.
+         *
+         * Exemple d'utilisation:
+         * - Input: mode `login` activé.
+         * - Output attendu: une table de clients valides pour la connexion.
+         */
         const loadCustomers = async () => {
             try {
                 const customerApi = new Customer({}, false);
-                const data = await customerApi.getAllFiltered();
+                const data = await customerApi.getExclApi(ANONYMOUS_CUSTOMER_ID);
                 const filtered = (data ?? []).filter((item) => (
                     Number(item?.isGuest ?? 0) !== 1
                     && Number(item?.id ?? 0) !== CustomerService.ANONYMOUS_ID
@@ -95,9 +162,29 @@ function FOGuestCheckout() {
     }, [mode]);
 
     /**
-     * Associe un client existant au panier invite.
-     * Parametres: customer.
-     * Retour: Promise<void>.
+     * Connecte un client existant au panier via `CustomerService.connectCustomerToCart`.
+     *
+     * Paramètres:
+     * - `customer` (object): client sélectionné.
+     *
+     * Type de résultat:
+     * - Promise<void>. Met à jour `cart`, `user` et `isGuest`.
+     *
+     * Ce que fait la fonction:
+     * - Associe le panier courant au client choisi.
+     * - Désactive le mode invité après connexion.
+     *
+     * Règles métier:
+     * - Un client valide doit être fourni.
+     * - L'opération ne peut pas être relancée pendant une soumission déjà en cours.
+     *
+     * Fonctionnement:
+     * - Le service de connexion renvoie la nouvelle structure panier + client.
+     * - Les états locaux sont mis à jour avec cette réponse.
+     *
+     * Exemple d'utilisation:
+     * - Input: `handleLoginCustomer(customer)`
+     * - Output attendu: `user` devient le client choisi et `isGuest` passe à `false`.
      */
     const handleLoginCustomer = async (customer) => {
         if (!customer || isSubmitting) {
@@ -119,7 +206,26 @@ function FOGuestCheckout() {
     };
 
     /**
-     * Met a jour un champ du formulaire register.
+     * Génère un handler de mise à jour d'un champ du formulaire d'inscription.
+     *
+     * Paramètres:
+     * - `field` (string): nom du champ à mettre à jour.
+     *
+     * Type de résultat:
+     * - function(event). Retourne un handler qui met à jour `form`.
+     *
+     * Ce que fait la fonction:
+     * - Produit une fonction de saisie réutilisable pour les champs du formulaire.
+     *
+     * Règles métier:
+     * - Le champ ciblé doit correspondre à une propriété existante de l'état du formulaire.
+     *
+     * Fonctionnement:
+     * - Le handler copie le formulaire actuel puis remplace la valeur du champ ciblé.
+     *
+     * Exemple d'utilisation:
+     * - Input: `handleFormChange("email")`
+     * - Output attendu: un handler qui met à jour `form.email`.
      */
     const handleFormChange = (field) => (event) => {
         setForm((prev) => ({
@@ -129,13 +235,32 @@ function FOGuestCheckout() {
     };
 
     /**
-     * Cree un client + adresse puis associe ce client au panier.
-     * Regles metier: tous les champs obligatoires doivent etre renseignes.
-     * Parametres: event submit.
-     * Retour: Promise<void>.
+     * Soumet le formulaire d'enregistrement du client invité et crée le compte avec l'adresse.
+     *
+     * Paramètres:
+     * - `event` (SubmitEvent): événement de soumission du formulaire.
+     *
+     * Type de résultat:
+     * - Promise<void>. Met à jour `cart`, `user`, `isGuest` ou `error`.
+     *
+     * Ce que fait la fonction:
+     * - Valide la présence de tous les champs requis.
+     * - Vérifie qu'un panier est bien disponible.
+     * - Délègue la création du client et de l'adresse au service métier.
+     *
+     * Règles métier:
+     * - Tous les champs sont obligatoires.
+     * - Un panier doit exister pour créer le compte depuis le checkout.
+     *
+     * Fonctionnement:
+     * - Le formulaire est bloqué par `preventDefault()`.
+     * - Les données sont envoyées à `CustomerService.registerCustomerForCart`.
+     *
+     * Exemple d'utilisation:
+     * - Input: soumission du formulaire avec prénom, nom, email, mot de passe et adresse valides.
+     * - Output attendu: création du client, association au panier et sortie du mode invité.
      */
     const handleFormSubmit = async (event) => {
-        // Etape 3: valider les entrees formulaire avant appel service.
         event.preventDefault();
         setError("");
 
@@ -173,9 +298,29 @@ function FOGuestCheckout() {
     };
 
     /**
-     * Confirme la commande finale depuis le panier courant.
-     * Parametres: aucun.
-     * Retour: void (promesse geree en then/catch).
+     * Confirme la commande pour le client courant en créant une commande.
+     *
+     * Paramètres:
+     * - Aucun.
+     *
+     * Type de résultat:
+     * - Promise<void> via `OderService.createOrderFromCart`.
+     *
+     * Ce que fait la fonction:
+     * - Vérifie la présence du panier et du client.
+     * - Crée la commande et redirige vers la liste des commandes.
+     *
+     * Règles métier:
+     * - La commande ne peut être confirmée que pour un client identifié.
+     * - Sans panier ou sans client, la validation est refusée.
+     *
+     * Fonctionnement:
+     * - La date courante est utilisée pour la création de commande.
+     * - Le service métier est appelé puis les retours succès ou erreur sont affichés.
+     *
+     * Exemple d'utilisation:
+     * - Input: clic sur le bouton de confirmation après connexion.
+     * - Output attendu: commande créée puis navigation vers `/fo/orders`.
      */
     const handleConfirmOrder = () => {
         if (!cart || !user?.id) {
@@ -201,130 +346,61 @@ function FOGuestCheckout() {
     }
 
     return (
-        <div className="row g-4">
-            <div className="col-lg-8">
-                <div className="card">
-                    <div className="card-header">
-                        <h5 className="mb-0">Finaliser la commande</h5>
-                    </div>
-                    <div className="card-body">
-                        {error ? (
-                            <div className="alert alert-danger" role="alert">
-                                {error}
-                            </div>
-                        ) : null}
+        <div>
+            <h1>Finaliser la commande</h1>
 
-                        <ul className="nav nav-pills mb-4">
-                            <li className="nav-item">
-                                <button
-                                    className={`nav-link ${mode === "login" ? "active" : ""}`}
-                                    type="button"
-                                    onClick={() => setMode("login")}
-                                >
-                                    Se connecter
-                                </button>
-                            </li>
-                            <li className="nav-item">
-                                <button
-                                    className={`nav-link ${mode === "register" ? "active" : ""}`}
-                                    type="button"
-                                    onClick={() => setMode("register")}
-                                >
-                                    Creer un compte
-                                </button>
-                            </li>
-                        </ul>
+            {error ? <p>{error}</p> : null}
 
-                        {mode === "login" ? (
-                            <div>
-                                <h6 className="mb-3">Choisir un client</h6>
-                                <div className="table-responsive">
-                                    <table className="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>ID</th>
-                                                <th>Firstname</th>
-                                                <th>Lastname</th>
-                                                <th>Email</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {customers.map((customer) => (
-                                                <FOUserRow
-                                                    key={customer.id}
-                                                    customer={customer}
-                                                    onClick={() => handleLoginCustomer(customer)}
-                                                />
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        ) : (
-                            <form onSubmit={handleFormSubmit} className="row g-3">
-                                <div className="col-md-6">
-                                    <label className="form-label">Firstname</label>
-                                    <input className="form-control" type="text" value={form.firstname} onChange={handleFormChange("firstname")} />
-                                </div>
-                                <div className="col-md-6">
-                                    <label className="form-label">Lastname</label>
-                                    <input className="form-control" type="text" value={form.lastname} onChange={handleFormChange("lastname")} />
-                                </div>
-                                <div className="col-md-6">
-                                    <label className="form-label">Email</label>
-                                    <input className="form-control" type="email" value={form.email} onChange={handleFormChange("email")} />
-                                </div>
-                                <div className="col-md-6">
-                                    <label className="form-label">Password</label>
-                                    <input className="form-control" type="text" value={form.password} onChange={handleFormChange("password")} />
-                                </div>
-                                <div className="col-md-6">
-                                    <label className="form-label">Adresse</label>
-                                    <input className="form-control" type="text" value={form.address1} onChange={handleFormChange("address1")} />
-                                </div>
-                                <div className="col-md-3">
-                                    <label className="form-label">Code postal</label>
-                                    <input className="form-control" type="text" value={form.postcode} onChange={handleFormChange("postcode")} />
-                                </div>
-                                <div className="col-md-3">
-                                    <label className="form-label">Ville</label>
-                                    <input className="form-control" type="text" value={form.city} onChange={handleFormChange("city")} />
-                                </div>
-                                <div className="col-12">
-                                    <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
-                                        Creer compte
-                                    </button>
-                                </div>
-                            </form>
-                        )}
-                    </div>
-                </div>
+            <div>
+                <button type="button" onClick={() => setMode("login")}>Se connecter</button>
+                <button type="button" onClick={() => setMode("register")}>Inserer les infos</button>
             </div>
 
-            <div className="col-lg-4">
-                <div className="card">
-                    <div className="card-body">
-                        <h6 className="mb-2">Panier actif</h6>
-                        <p className="text-muted mb-3">Votre panier #{cart?.id}</p>
-                        <ul className="list-unstyled mb-3">
-                            <li className="d-flex justify-content-between mb-2">
-                                <span>Statut</span>
-                                <span className="badge bg-label-info">Invite</span>
-                            </li>
-                            <li className="d-flex justify-content-between">
-                                <span>Verification</span>
-                                <span className="badge bg-label-success">OK</span>
-                            </li>
-                        </ul>
-                        {!isGuest ? (
-                            <button className="btn btn-success w-100" type="button" onClick={handleConfirmOrder}>
-                                Effectuer la commande
-                            </button>
-                        ) : null}
-                    </div>
+            {mode === "login" ? (
+                <div>
+                    <h2>Choisir un client</h2>
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Firstname</th>
+                            <th>Lastname</th>
+                            <th>Email</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {customers.map((customer) => (
+                            <FOUserRow
+                                key={customer.id}
+                                customer={customer}
+                                onClick={() => handleLoginCustomer(customer)}
+                            />
+                        ))}
+                        </tbody>
+                    </table>
                 </div>
-            </div>
+            ) : (
+                <form onSubmit={handleFormSubmit}>
+                    <h2>Informations client</h2>
+                    <input type="text" placeholder="Firstname" value={form.firstname} onChange={handleFormChange("firstname")} />
+                    <input type="text" placeholder="Lastname" value={form.lastname} onChange={handleFormChange("lastname")} />
+                    <input type="email" placeholder="Email" value={form.email} onChange={handleFormChange("email")} />
+                    <input type="text" placeholder="Password" value={form.password} onChange={handleFormChange("password")} />
+                    <input type="text" placeholder="Adresse" value={form.address1} onChange={handleFormChange("address1")} />
+                    <input type="text" placeholder="Code postal" value={form.postcode} onChange={handleFormChange("postcode")} />
+                    <input type="text" placeholder="Ville" value={form.city} onChange={handleFormChange("city")} />
+                    <button type="submit" disabled={isSubmitting}>Creer compte</button>
+                </form>
+            )}
+
+            {!isGuest ? (
+                <div>
+                    <button type="button" onClick={handleConfirmOrder}>
+                        Effectuer la commande
+                    </button>
+                </div>
+            ) : null}
         </div>
     );
 }

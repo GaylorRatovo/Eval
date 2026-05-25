@@ -9,12 +9,33 @@ import FOCartRow from "../components/FOCartRow.jsx";
 import useLocalStorage from "../hooks/useLocalStorage.jsx";
 
 /**
- * Page FrontOffice du panier client.
- * Regles metier: ne manipule que le panier actif du client, limite les quantites au stock disponible,
- * et redirige les invites vers le checkout invite.
- * Methode: charge/enrichit le panier, permet edition des lignes, puis creation de commande.
- * Parametres: aucun.
- * Retour: JSX de gestion du panier.
+ * Page FrontOffice d'affichage et de manipulation du panier utilisateur.
+ *
+ * Paramètres:
+ * - Aucun. Le composant s'appuie sur le panier backend et le contexte utilisateur en localStorage.
+ *
+ * Type de résultat:
+ * - JSX.Element. Rend le tableau du panier, les totaux et l'action de commande.
+ *
+ * Ce que fait la fonction:
+ * - Charge le dernier panier actif du client connecté.
+ * - Enrichit chaque ligne avec les données produit, les déclinaisons, le stock et les prix.
+ * - Permet de modifier les options, la quantité, de supprimer une ligne et de lancer le checkout.
+ *
+ * Règles métier:
+ * - Le panier affiché est le dernier panier actif du client courant.
+ * - Un client invité est redirigé vers le checkout invité pour finaliser la commande.
+ * - La quantité saisie est bornée par le stock disponible quand le stock est connu.
+ * - La commande n'est créée que si un utilisateur identifié est présent.
+ *
+ * Fonctionnement:
+ * - Le composant récupère les données du panier dans `useEffect`.
+ * - Les lignes sont enrichies avec les données produit nécessaires à l'affichage.
+ * - Les handlers locaux synchronisent l'état React avec la persistance backend.
+ *
+ * Exemple d'utilisation:
+ * - Input: `<FOCart />`
+ * - Output attendu: un tableau de panier avec actions de modification et bouton "Commander".
  */
 function FOCart() {
     const [cart, setCart] = useState(null);
@@ -26,7 +47,6 @@ function FOCart() {
 
     const navigate = useNavigate();
 
-    // Etape 1: recalculer les totaux HT/TTC des que les lignes enrichies changent.
     const totals = useMemo(() => (
         CartService.getCartTotals({
             cartRows: rowDetails
@@ -34,9 +54,28 @@ function FOCart() {
     ), [rowDetails]);
 
     /**
-     * Formate un prix numerique pour affichage.
-     * Parametres: value.
-     * Retour: string (2 decimales) ou "-".
+     * Formate un prix numérique avec 2 décimales ou renvoie '-' si la valeur est invalide.
+     *
+     * Paramètres:
+     * - `value` (number|string): valeur à formater.
+     *
+     * Type de résultat:
+     * - string. Exemple: `12.5` devient `12.50`.
+     *
+     * Ce que fait la fonction:
+     * - Convertit la valeur en nombre.
+     * - Retourne un affichage stable pour les cellules de prix.
+     *
+     * Règles métier:
+     * - Toute valeur non numérique est affichée comme non disponible.
+     *
+     * Fonctionnement:
+     * - La conversion se fait avec `Number`.
+     * - Si le résultat n'est pas fini, la fonction retourne `-`.
+     *
+     * Exemple d'utilisation:
+     * - Input: `formatPrice(12.5)`
+     * - Output attendu: `"12.50"`
      */
     const formatPrice = (value) => {
         const number = Number(value);
@@ -47,16 +86,55 @@ function FOCart() {
     };
 
     /**
-     * Construit une cle stable de ligne pour React.
+     * Construit une clé stable pour une ligne de panier utilisée comme `key` React.
+     *
+     * Paramètres:
+     * - `row` (object): ligne de panier.
+     * - `index` (number): index courant dans la liste.
+     *
+     * Type de résultat:
+     * - string. Identifiant composite basé sur le produit et l'index.
+     *
+     * Ce que fait la fonction:
+     * - Combine l'identifiant produit et l'index pour éviter les collisions de rendu.
+     *
+     * Règles métier:
+     * - La clé doit rester déterministe pendant un même rendu.
+     *
+     * Fonctionnement:
+     * - La chaîne est construite avec `productId-index`.
+     *
+     * Exemple d'utilisation:
+     * - Input: `getRowKey({ productId: 7 }, 2)`
+     * - Output attendu: `"7-2"`
      */
     const getRowKey = (row, index) => {
         return `${row.productId}-${index}`;
     };
 
     /**
-     * Met a jour une ligne enrichie locale.
-     * Parametres: rowIndex, values (patch partiel).
-     * Retour: void.
+     * Met à jour localement une ligne enrichie de `rowDetails`.
+     *
+     * Paramètres:
+     * - `rowIndex` (number): index de la ligne à modifier.
+     * - `values` (object): propriétés à fusionner sur la ligne.
+     *
+     * Type de résultat:
+     * - void. Met à jour l'état React uniquement.
+     *
+     * Ce que fait la fonction:
+     * - Remplace une ligne ciblée par une copie fusionnée avec les nouvelles valeurs.
+     *
+     * Règles métier:
+     * - Les autres lignes du panier ne doivent pas être modifiées.
+     *
+     * Fonctionnement:
+     * - Le tableau est recréé avec `map`.
+     * - Seule la ligne à l'index demandé reçoit les nouveaux champs.
+     *
+     * Exemple d'utilisation:
+     * - Input: `updateRow(0, { quantity: 3 })`
+     * - Output attendu: la première ligne de `rowDetails` passe à quantité 3.
      */
     const updateRow = (rowIndex, values) => {
         setRowDetails(prev =>
@@ -67,14 +145,33 @@ function FOCart() {
     };
 
     /**
-     * Persiste les lignes du panier cote backend.
-     * Regles metier: met a jour localement avant puis apres confirmation backend.
-     * Parametres: nextCartRows.
-     * Retour: Promise<void>.
+     * Persiste en backend la nouvelle liste de lignes de panier.
+     *
+     * Paramètres:
+     * - `nextCartRows` (Array): lignes à sauvegarder.
+     *
+     * Type de résultat:
+     * - Promise<void>. Met à jour l'état `cart` avec l'entité retournée par le backend.
+     *
+     * Ce que fait la fonction:
+     * - Reconstruit une entité `Cart` à partir du panier courant.
+     * - Lance la mise à jour distante.
+     * - Réinjecte la version sauvegardée dans l'état local.
+     *
+     * Règles métier:
+     * - La source de vérité reste le backend après la sauvegarde.
+     * - Les données envoyées doivent représenter la nouvelle structure complète des lignes.
+     *
+     * Fonctionnement:
+     * - La fonction clone le panier courant avec les nouvelles lignes.
+     * - Elle appelle `update()` sur l'entité puis remplace l'état local avec la réponse.
+     *
+     * Exemple d'utilisation:
+     * - Input: `persistCartRows([{ productId: 1, quantity: 2 }])`
+     * - Output attendu: le panier local est remplacé par la version mise à jour.
      */
     const persistCartRows = async (nextCartRows) => {
         try {
-            // Etape 2: reconstruire une entite Cart coherente puis pousser l'update.
             const nextCart = Cart.fromData({
                 ...cart,
                 cartRows: nextCartRows,
@@ -91,7 +188,30 @@ function FOCart() {
     };
 
     /**
-     * Met a jour une ligne brute du cart (payload serveur).
+     * Met à jour une ligne côté `Cart` persistant et lance la sauvegarde.
+     *
+     * Paramètres:
+     * - `cartRowIndex` (number): index de la ligne dans `cart.cartRows`.
+     * - `values` (object): champs à fusionner sur la ligne.
+     *
+     * Type de résultat:
+     * - void. La persistance est déléguée à `persistCartRows`.
+     *
+     * Ce que fait la fonction:
+     * - Recalcule la liste complète des lignes du panier.
+     * - Envoie le résultat à la couche de persistance.
+     *
+     * Règles métier:
+     * - Seule la ligne ciblée doit changer.
+     * - Les valeurs de la ligne doivent rester compatibles avec le modèle de panier.
+     *
+     * Fonctionnement:
+     * - Le tableau des lignes est reconstruit par copie.
+     * - La ligne ciblée reçoit la fusion de `values`.
+     *
+     * Exemple d'utilisation:
+     * - Input: `updateCartRow(0, { quantity: 4 })`
+     * - Output attendu: la ligne persistée est mise à jour avec la nouvelle quantité.
      */
     const updateCartRow = (cartRowIndex, values) => {
         const nextRows = cart.cartRows.map((row, index) =>
@@ -104,13 +224,34 @@ function FOCart() {
     };
 
     /**
-     * Change la declinaison d'une ligne de panier.
-     * Regles metier: rafraichit le stock de la declinaison choisie.
-     * Parametres: rowIndex, nextId, cartRowIndex.
-     * Retour: Promise<void>.
+     * Gère le changement de déclinaison d'une ligne de panier.
+     *
+     * Paramètres:
+     * - `rowIndex` (number): index dans `rowDetails`.
+     * - `nextId` (number): identifiant de la nouvelle déclinaison.
+     * - `cartRowIndex` (number): index côté `cart.cartRows`.
+     *
+     * Type de résultat:
+     * - Promise<void>. Met à jour la ligne locale, la ligne persistée et recharge le stock.
+     *
+     * Ce que fait la fonction:
+     * - Synchronise la nouvelle option choisie dans l'UI et dans le panier backend.
+     * - Recharge ensuite le stock pour la variante sélectionnée.
+     *
+     * Règles métier:
+     * - Le stock affiché doit correspondre à la déclinaison sélectionnée.
+     * - La ligne persistée doit garder le même produit mais changer d'attribut.
+     *
+     * Fonctionnement:
+     * - La ligne locale est mise à jour immédiatement.
+     * - La version persistée reçoit le nouvel attribut.
+     * - Le stock est récupéré à partir de `CartService`.
+     *
+     * Exemple d'utilisation:
+     * - Input: `handleOptionChange(0, 12, 0)`
+     * - Output attendu: la première ligne passe sur l'option 12 et son stock est rechargé.
      */
     const handleOptionChange = async (rowIndex, nextId, cartRowIndex) => {
-        // Etape 3: appliquer la selection localement puis persister la ligne panier.
         updateRow(rowIndex, {
             selectedOptionId: nextId
         });
@@ -119,7 +260,6 @@ function FOCart() {
             productAttributeId: nextId
         });
 
-        // Etape 4: relire le stock de la nouvelle declinaison.
         try {
             const productId = rowDetails[rowIndex].productId;
 
@@ -137,10 +277,31 @@ function FOCart() {
     };
 
     /**
-     * Change la quantite d'une ligne avec borne stock.
-     * Regles metier: minimum 1, maximum stock disponible quand connu.
-     * Parametres: rowIndex, nextQty, cartRowIndex.
-     * Retour: void.
+     * Gère la modification de quantité d'une ligne de panier.
+     *
+     * Paramètres:
+     * - `rowIndex` (number): index dans `rowDetails`.
+     * - `nextQty` (number): quantité demandée.
+     * - `cartRowIndex` (number): index côté `cart.cartRows`.
+     *
+     * Type de résultat:
+     * - void.
+     *
+     * Ce que fait la fonction:
+     * - Force une quantité minimale de 1.
+     * - Limite la quantité au stock disponible quand celui-ci est connu.
+     * - Synchronise l'état local et le panier persistant.
+     *
+     * Règles métier:
+     * - Une ligne ne peut jamais descendre sous 1 unité.
+     * - Si le stock est connu et positif, la quantité ne peut pas le dépasser.
+     *
+     * Fonctionnement:
+     * - La quantité est normalisée puis transmise aux fonctions de mise à jour.
+     *
+     * Exemple d'utilisation:
+     * - Input: `handleQuantityChange(0, 99, 0)` avec stock 5
+     * - Output attendu: quantité bloquée à 5.
      */
     const handleQuantityChange = (rowIndex, nextQty, cartRowIndex) => {
         const stock = Number(rowDetails[rowIndex].stockQuantity);
@@ -152,10 +313,28 @@ function FOCart() {
     };
 
     /**
-     * Supprime une ligne de panier.
-     * Regles metier: si derniere ligne, le panier peut etre supprime.
-     * Parametres: rowIndex.
-     * Retour: Promise<void>.
+     * Supprime une ligne du panier via `CartService.deleteItems`.
+     *
+     * Paramètres:
+     * - `rowIndex` (number): index de la ligne à supprimer.
+     *
+     * Type de résultat:
+     * - Promise<void>. Met à jour `cart` et `rowDetails`.
+     *
+     * Ce que fait la fonction:
+     * - Demande la suppression de la ligne au backend.
+     * - Retire la ligne de l'affichage local si la suppression réussit.
+     *
+     * Règles métier:
+     * - Si le backend renvoie un panier vide ou nul, l'état local doit refléter l'absence de panier.
+     *
+     * Fonctionnement:
+     * - La suppression est déléguée à `CartService`.
+     * - La réponse pilote ensuite l'actualisation locale.
+     *
+     * Exemple d'utilisation:
+     * - Input: `handleDeleteRow(1)`
+     * - Output attendu: la deuxième ligne disparaît du panier affiché.
      */
     const handleDeleteRow = async (rowIndex) => {
         try {
@@ -186,10 +365,30 @@ function FOCart() {
     };
 
     /**
-     * Lance le checkout.
-     * Regles metier: invite => passage par `/fo/checkout`, client connecte => creation directe commande.
-     * Parametres: aucun.
-     * Retour: Promise<void>.
+     * Lance le processus de checkout du panier.
+     *
+     * Paramètres:
+     * - Aucun.
+     *
+     * Type de résultat:
+     * - Promise<void>.
+     *
+     * Ce que fait la fonction:
+     * - Redirige un invité vers le checkout dédié.
+     * - Sinon crée une commande à partir du panier courant.
+     * - Informe l'utilisateur du succès ou de l'échec.
+     *
+     * Règles métier:
+     * - Un invité ne peut pas valider directement une commande depuis cette page.
+     * - Une commande ne peut être créée que si un utilisateur identifié est disponible.
+     *
+     * Fonctionnement:
+     * - Le comportement dépend du flag `isGuest`.
+     * - La création de commande est déléguée à `OderService`.
+     *
+     * Exemple d'utilisation:
+     * - Input: clic sur "Commander"
+     * - Output attendu: redirection vers `/fo/checkout` pour un invité, ou création de commande pour un client connecté.
      */
     const handleCheckout = async () => {
         if (isGuest) {
@@ -213,7 +412,32 @@ function FOCart() {
     };
 
     useEffect(() => {
-        // Etape 5: charger le panier actif du client et enrichir les lignes pour l'affichage.
+        /**
+         * Charge et enrichit le panier courant depuis le backend.
+         *
+         * Paramètres:
+         * - Aucun.
+         *
+         * Type de résultat:
+         * - Promise<void>. Met à jour `cart`, `rowDetails` et `isLoading`.
+         *
+         * Ce que fait la fonction:
+         * - Récupère le dernier panier actif du client.
+         * - Vérifie que le panier est encore actif.
+         * - Enrichit les lignes avec les données produit, prix, stock et déclinaisons.
+         *
+         * Règles métier:
+         * - Si l'utilisateur n'a pas d'identifiant, aucun panier ne doit être chargé.
+         * - Les lignes enrichies doivent correspondre à des produits réels et à leurs attributs.
+         *
+         * Fonctionnement:
+         * - Le panier est lu puis validé côté backend.
+         * - Les produits sont chargés, mis en cache localement et fusionnés avec les lignes du panier.
+         *
+         * Exemple d'utilisation:
+         * - Input: chargement du composant pour un client connecté.
+         * - Output attendu: un panier enrichi prêt à l'affichage.
+         */
         const loadDatas = async () => {
             try {
                 setIsLoading(true);
@@ -235,7 +459,6 @@ function FOCart() {
                     return;
                 }
 
-                // Etape 6: enrichir le panier pour obtenir image/nom/prix/declinaisons/stock.
                 const enriched = await CartWithDetails
                     .fromCart(customerCart)
                     .enrich();
@@ -249,6 +472,28 @@ function FOCart() {
                 }
 
                 const productCache = new Map();
+                /**
+                 * Récupère un produit en cache ou depuis le backend.
+                 *
+                 * Paramètres:
+                 * - `productId` (number): identifiant du produit à charger.
+                 *
+                 * Type de résultat:
+                 * - Promise<Product|null>. Retourne le produit trouvé ou `null`.
+                 *
+                 * Ce que fait la fonction:
+                 * - Évite de recharger plusieurs fois le même produit pendant l'enrichissement.
+                 *
+                 * Règles métier:
+                 * - Un produit déjà chargé doit être réutilisé pendant la même passe.
+                 *
+                 * Fonctionnement:
+                 * - Un `Map` local sert de cache temporaire.
+                 *
+                 * Exemple d'utilisation:
+                 * - Input: `getProduct(15)`
+                 * - Output attendu: l'entité produit 15.
+                 */
                 const getProduct = async (productId) => {
                     if (productCache.has(productId)) {
                         return productCache.get(productId);
@@ -303,7 +548,6 @@ function FOCart() {
                 ))
                     .filter(Boolean);
 
-                // Etape 7: hydrater l'etat final de la page.
                 setCart(customerCart);
                 setRowDetails(rows);
 
@@ -329,74 +573,52 @@ function FOCart() {
         return <p>pas de panier</p>;
     }
 
-    return (
-        <div className="row g-4">
-            <div className="col-lg-8">
-                <div className="card">
-                    <div className="card-header d-flex align-items-center justify-content-between">
-                        <h5 className="mb-0">Mon panier</h5>
-                        <span className="badge bg-label-primary">#{cart.id}</span>
-                    </div>
-                    <div className="card-body">
-                        {rowDetails.length === 0 ? (
-                            <p className="text-muted">Panier vide</p>
-                        ) : (
-                            <div className="table-responsive">
-                                <table className="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Nom</th>
-                                            <th>Reference</th>
-                                            <th>Image</th>
-                                            <th>Declinaison</th>
-                                            <th>Stock</th>
-                                            <th>Prix TTC</th>
-                                            <th>Quantite</th>
-                                            <th>Total ligne</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
+    return <>
+        <h1>Panier : {cart.id}</h1>
 
-                                    <tbody>
-                                        {rowDetails.map((row, index) => (
-                                            <FOCartRow
-                                                key={getRowKey(row, index)}
-                                                row={row}
-                                                index={index}
-                                                onOptionChange={handleOptionChange}
-                                                onQuantityChange={handleQuantityChange}
-                                                onDelete={handleDeleteRow}
-                                                formatPrice={formatPrice}
-                                            />
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+        {rowDetails.length === 0 ? (
+            <p>panier vide</p>
+        ) : (
+            <>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Reference</th>
+                        <th>Image</th>
+                        <th>Declinaison</th>
+                        <th>Stock</th>
+                        <th>Prix TTC</th>
+                        <th>Quantite</th>
+                        <th>Total ligne</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
 
-            <div className="col-lg-4">
-                <div className="card">
-                    <div className="card-body">
-                        <h6 className="mb-3">Resume</h6>
-                        <div className="d-flex justify-content-between mb-2">
-                            <span>Total HT</span>
-                            <span>{formatPrice(totals.totalHt)}</span>
-                        </div>
-                        <div className="d-flex justify-content-between mb-3">
-                            <span>Total TTC</span>
-                            <span className="fw-bold text-primary">{formatPrice(totals.totalTtc)}</span>
-                        </div>
-                        <button className="btn btn-primary w-100" onClick={handleCheckout}>
-                            Commander
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+                    <tbody>
+                    {rowDetails.map((row, index) => (
+                        <FOCartRow
+                            key={getRowKey(row, index)}
+                            row={row}
+                            index={index}
+                            onOptionChange={handleOptionChange}
+                            onQuantityChange={handleQuantityChange}
+                            onDelete={handleDeleteRow}
+                            formatPrice={formatPrice}
+                        />
+                    ))}
+                    </tbody>
+                </table>
+
+                <p>Total HT : {formatPrice(totals.totalHt)}</p>
+                <p>Total TTC : {formatPrice(totals.totalTtc)}</p>
+
+                <button onClick={handleCheckout}>
+                    Commander
+                </button>
+            </>
+        )}
+    </>;
 }
 
 export default FOCart;

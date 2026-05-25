@@ -2,6 +2,7 @@
 
 ## Index
 - BackOffice
+  - [BOMainLayout](BackOffice/BOMainLayout.md)
   - [BODashboard](BackOffice/BODashboard.md)
   - [BOStock](BackOffice/BOStock.md)
   - [BOImport](BackOffice/BOImport.md)

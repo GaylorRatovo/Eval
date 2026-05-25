@@ -147,6 +147,84 @@ const columns = useMemo(() => [
 { accessorFn: row => row.user?.email, id: "userEmail", header: "Email" }
 ```
 
+### Colonne « Total »
+
+Deux cas distincts selon ce qu'on veut afficher.
+
+#### a) Total par ligne (colonne calculée)
+
+Pour afficher le total d'une ligne (ex. `quantité × prixUnitaire`), utiliser `accessorFn` avec un `id` :
+
+```jsx
+const columns = useMemo(() => [
+    { accessorKey: "name", header: "Produit" },
+    { accessorKey: "quantity", header: "Quantité" },
+    { accessorKey: "unitPrice", header: "Prix unitaire" },
+    {
+        id: "total",
+        header: "Total",
+        accessorFn: row => row.quantity * row.unitPrice,
+        Cell: ({ cell }) => `${cell.getValue().toFixed(2)} €`,
+        muiTableBodyCellProps: { align: "right" },
+    },
+], []);
+```
+
+> La valeur étant calculée, le tri et les filtres (`range`, `range-slider`) fonctionnent nativement sur la colonne.
+
+#### b) Total en pied de colonne (somme d'une colonne)
+
+Pour afficher la somme d'une colonne dans un pied de tableau, utiliser la prop `Footer` de la colonne et activer le pied via l'instance MUI (le pied est rendu automatiquement dès qu'au moins une colonne définit `Footer` ou `footer`) :
+
+```jsx
+const columns = useMemo(() => [
+    { accessorKey: "name", header: "Produit" },
+    {
+        accessorKey: "quantity",
+        header: "Quantité",
+        Footer: ({ table }) => {
+            const total = table
+                .getFilteredRowModel()
+                .rows.reduce((sum, row) => sum + (row.original.quantity ?? 0), 0);
+            return <strong>Total : {total}</strong>;
+        },
+    },
+    {
+        accessorKey: "amount",
+        header: "Montant",
+        Cell: ({ cell }) => `${cell.getValue().toFixed(2)} €`,
+        Footer: ({ table }) => {
+            const total = table
+                .getFilteredRowModel()
+                .rows.reduce((sum, row) => sum + (row.original.amount ?? 0), 0);
+            return <strong>{total.toFixed(2)} €</strong>;
+        },
+        muiTableBodyCellProps: { align: "right" },
+        muiTableFooterCellProps: { align: "right" },
+    },
+], []);
+```
+
+> **Choix du modèle de lignes** :
+> - `table.getFilteredRowModel()` — total sur les lignes filtrées (toutes pages confondues). **Recommandé.**
+> - `table.getRowModel()` — total sur la page courante uniquement.
+> - `table.getPrePaginationRowModel()` — équivalent à `getFilteredRowModel()` quand la pagination est active.
+>
+> Pour un total **toujours sur toutes les données** (ignore filtres et pagination), calculer directement sur `data` avec `useMemo` et passer la valeur via closure.
+
+#### c) Pied fixe (sticky footer)
+
+Pour garder le pied visible en bas du conteneur scrollable :
+
+```jsx
+useMaterialReactTable({
+    columns,
+    data,
+    enableStickyFooter: true,
+    muiTableContainerProps: { sx: { maxHeight: 500 } },
+});
+```
+
 ---
 
 ## 5. Tri
@@ -493,6 +571,88 @@ useMaterialReactTable({
     }),
     muiTableBodyCellProps: { sx: { fontSize: "0.9rem" } },
 });
+```
+
+### `sx` ou `className` ?
+
+`sx` n'est pas une balise HTML ni un mot imposé par Material React Table. C'est une prop MUI qui accepte un objet de styles JavaScript.
+
+- Si tu veux styler rapidement un composant MUI ou une ligne MRT, `sx` est la solution la plus directe.
+- Si tu préfères centraliser le style dans un fichier CSS, tu peux renvoyer une `className` depuis `muiTableBodyRowProps` et écrire la règle CSS à part.
+
+Exemple 1 - couleur de ligne avec `sx` :
+
+```jsx
+useMaterialReactTable({
+    columns,
+    data,
+    muiTableBodyRowProps: ({ row }) => ({
+        sx: {
+            backgroundColor: Number(row.original?.currentState) === 5 ? "#d4edda" : "inherit",
+        },
+    }),
+});
+```
+
+Exemple 2 - couleur de cellule avec `sx` :
+
+```jsx
+{
+    header: "Prix",
+    accessorKey: "price",
+    muiTableBodyCellProps: ({ cell }) => ({
+        sx: {
+            color: Number(cell.getValue() ?? 0) > 500 ? "#721c24" : "#155724",
+            fontWeight: Number(cell.getValue() ?? 0) > 500 ? "bold" : "normal",
+        },
+    }),
+}
+```
+
+Exemple 3 - couleur de ligne avec `className` :
+
+```jsx
+useMaterialReactTable({
+    columns,
+    data,
+    muiTableBodyRowProps: ({ row }) => ({
+        className: Number(row.original?.currentState) === 5 ? "row-delivered" : "row-default",
+    }),
+});
+```
+
+Exemple 4 - couleur de cellule avec `className` :
+
+```jsx
+{
+    header: "Prix",
+    accessorKey: "price",
+    muiTableBodyCellProps: ({ cell }) => ({
+        className: Number(cell.getValue() ?? 0) > 500 ? "redclass" : "greenclass",
+    }),
+}
+```
+
+Puis dans un fichier CSS :
+
+```css
+.row-delivered {
+    background-color: #d4edda;
+}
+
+.row-default {
+    background-color: white;
+}
+
+.redclass {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.greenclass {
+    background-color: #d4edda;
+    color: #155724;
+}
 ```
 
 ### Mode dense / striped / hover

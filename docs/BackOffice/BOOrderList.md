@@ -1,53 +1,55 @@
 # BOOrderList
 
-## 1. Présentation générale
-- Rôle : Lister toutes les commandes et permettre la modification manuelle de leur état.
-- Problème métier : Gérer les statuts de commandes (mise à jour, correction manuelle).
-- Utilisateurs : Equipe support / préparation / gestion des commandes.
+## Présentation générale
+La page `BOOrderList.jsx` liste toutes les commandes et permet de modifier manuellement leur état. Elle sert à corriger ou à faire avancer un flux de commande quand une intervention humaine est nécessaire.
 
-## 2. Fonctionnement utilisateur
-1. La page charge toutes les commandes via `orderService.getOrderRows()`.
-2. Le tableau `BOOrderRow` affiche les commandes avec cellule d'action (état + date + bouton modifier).
-3. L'utilisateur peut sélectionner une commande et définir un nouvel état et une date de mise à jour.
-4. En cliquant sur action, `orderService.updateOrderState()` est appelé.
-4. Le résultat de l'action (succès/erreur) est affiché.
+## Fonctionnement utilisateur
+1. La page charge les commandes avec `orderService.getOrderRows()`.
+2. `BOOrderRow` affiche les colonnes métier et une cellule d'action.
+3. L'utilisateur choisit un état et une date.
+4. Le bouton de modification appelle `orderService.updateOrderState()`.
+5. Un message de succès ou d'erreur s'affiche au-dessus du tableau.
 
-## 3. Flux de données
+## Flux de données
 Utilisateur
     ↓
-`BOOrderList.jsx` (état `orders`, `edit`)
+`BOOrderList.jsx`
     ↓
-Service `OderService.getOrderRows()` pour lecture
+`OderService.getOrderRows()`
     ↓
-`OderService.updateOrderState()` pour écrire historique (`MyOrderState`)
+`BOOrderRow.jsx`
+    ↓
+`OderService.updateOrderState()`
+    ↓
+`MyOrderState.save()` puis historique de commande
 
-## 4. Logique métier
-- Quoi : Permettre la mise à jour de l'état d'une commande et l'enregistrement d'un historique.
-- Comment : Construction d'un payload `MyOrderState.fromData(...)` et `save()` via classes entities.
-- Pourquoi : Corriger des erreurs manuelles ou avancer manuellement une commande dans le process.
-- Quand : À la demande via interface backoffice.
+## Logique métier
+La page garde en mémoire la ligne en cours d'édition pour injecter l'état et la date dans la cellule d'action. Le service valide les transitions de statut autorisées avant d'écrire l'historique.
 
-Vérifications métier : vérifie la présence d'un `newStateId` et d'une `dateUpdate` avant de soumettre.
+Cette page n'édite pas directement le texte affiché dans le tableau; elle crée une entrée métier dans PrestaShop.
 
-## 5. Explication du code
-- Composant : `BOOrderList.jsx` délègue l'affichage à `BOOrderRow` (table MaterialReactTable + cellule action).
-- Hooks : `useEffect` pour chargement, `useState` pour l'édition et résultats d'action.
-- Services : `OderService` (lecture et mise à jour d'état).
-- DTO/Entities : `Order`, `OrderHistory`, `MyOrderState`.
+## Explication du code
+`useEffect` déclenche le chargement initial. `handleChange` stocke la ligne modifiée et la valeur du champ. `handleClick` construit les paramètres finaux à partir de l'état courant et appelle le service.
 
-## 6. Analogies
-Comme un responsable de centre d'appels qui met à jour manuellement le statut d'une demande client après action.
+Fonctions utilisées : `getOrderRows`, `updateOrderState`, `formatDateInput`.
 
-## 7. Exemples concrets
-- Mettre une commande en statut "Expédié" et renseigner la date d'expédition manuelle.
+## Analogies simples
+Comme un tableau de suivi des colis où l'opérateur peut forcer manuellement un changement de statut après vérification.
 
-## 8. Relations avec PrestaShop
-- Ressources : `orders`, `order_histories`, `order_states`.
-- Endpoints : lecture (`getAll`, `getBy`) et écriture (`MyOrderState.save()`).
+## Exemples concrets
+- Passer une commande de `Paiement accepté` à `Livré` en saisissant une date d'expédition réelle.
 
-## 9. Dépendances
-- `OderService.js`, `BOOrderRow.jsx`, entities `Order`, `OrderHistory`, `MyOrderState`.
+## Relations avec PrestaShop
+Ressources utilisées : `orders`, `order_histories`, `order_states`.
 
-## 10. Résumé
-- Résumé métier : Outil de gestion manuelle des statuts de commandes.
-- Résumé technique : `BOOrderRow` expose l'édition inline, `BOOrderList` conserve l'état d'édition et `OderService.updateOrderState` persiste l'historique.
+## Dépendances
+- `src/backend/services/OderService.js`
+- `src/components/BOOrderRow.jsx`
+- `src/backend/utils/utils.js`
+
+## Voir aussi
+- [OderService](services/OderService.md)
+- [BOOrderRow](components/BOOrderRow.md)
+
+## Résumé
+Liste opérationnelle des commandes avec édition inline du statut et journalisation via historique PrestaShop.

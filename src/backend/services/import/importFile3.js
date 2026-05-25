@@ -11,29 +11,63 @@ import { getExistingOrderStateId } from '../../utils/parsing.js'
 
 const FILE3_HEADER = ['email', 'nom', 'pwd', 'adresse', 'achat', 'etat', 'date']
 
-/** Parse et valide le CSV du fichier 3. */
+/**
+ * Parse le fichier CSV commandes/clients (fichier 3) et vérifie l'en-tête.
+ *
+ * Paramètres:
+ * - `file` (File): objet File.
+ *
+ * Retour: Promise<Array<object>> — lignes CSV parsées.
+ */
 export const parseFile3CSV = async (file) => {
     const text = await file.text()
     checkCSVHeader(text, FILE3_HEADER)
     return parseCSV(text)
 }
-
-/** Construit le payload Customer pour import. */
+/**
+ * Construit une instance `Customer` à partir des champs fournis.
+ *
+ * Paramètres:
+ * - `firstname`, `lastname`, `email`, `password` (string).
+ *
+ * Retour: Customer (instance prête à `save()`).
+ */
 export const buildCustomerPayload = (firstname, lastname, email, password) => {
     return Customer.fromData({ firstname, lastname, email, password, idShop: 1, idShopGroup: 1 })
 }
 
-/** Construit le payload Address pour import. */
+/**
+ * Construit une instance `Address` pour un client importé.
+ *
+ * Paramètres:
+ * - `customerId` (number), `firstname`, `lastname`, `address` (string).
+ *
+ * Retour: Address (instance prête à `save()`).
+ */
 export const buildAddressPayload = (customerId, firstname, lastname, address) => {
     return Address.fromData({ idCustomer: customerId, idCountry: 8, firstname, lastname, address1: address, city: 'Antananarivo', alias: 'import' })
 }
 
-/** Construit le payload Cart pour import. */
+/**
+ * Construit une instance `Cart` à partir des données d'une commande importée.
+ *
+ * Paramètres:
+ * - objet avec `customerId`, `addressId`, `secureKey`, `dateCmd`, `cartRows`, `shopGroupId`, `carrierId`.
+ *
+ * Retour: Cart (instance prête à `save()`).
+ */
 export const buildCartPayload = ({ customerId, addressId, secureKey, dateCmd, cartRows, shopGroupId, carrierId }) => {
     return Cart.fromData({ customerId, addressDeliveryId: addressId, addressInvoiceId: addressId, currencyId: 1, langId: 1, shopId: 1, shopGroupId: shopGroupId || 1, carrierId: carrierId || 1, secureKey, dateAdd: `${dateCmd} 00:00:00`, cartRows })
 }
 
-/** Construit le payload Order pour import. */
+/**
+ * Construit une instance `Order` à partir des données importées.
+ *
+ * Paramètres:
+ * - objet contenant `customerId`, `addressId`, `cartId`, `defaultCarrierId`, `secureKey`, `dateCmd`, `totals`, `orderRows`, `shopGroupId`.
+ *
+ * Retour: Order (instance prête à `save()`).
+ */
 export const buildOrderPayload = ({ customerId, addressId, cartId, defaultCarrierId, secureKey, dateCmd, totals, orderRows, shopGroupId }) => {
     return Order.fromData({
         customerId,
@@ -58,7 +92,14 @@ export const buildOrderPayload = ({ customerId, addressId, cartId, defaultCarrie
     })
 }
 
-/** Calcule les totaux commande HT/TTC a partir des items CSV. */
+/**
+ * Calcule les totaux (TTC/HT) d'une commande depuis les items avec mapping produit/variantes.
+ *
+ * Paramètres:
+ * - `items` (Array), `productMap` (object), `combinationPriceMap` (object).
+ *
+ * Retour: { totalPaid, totalProducts, totalProductsWT }.
+ */
 export const calculateTotals = (items, productMap, combinationPriceMap) => {
     let totalPaid = 0
     let totalProducts = 0
@@ -83,10 +124,12 @@ export const calculateTotals = (items, productMap, combinationPriceMap) => {
 }
 
 /**
- * Traite une ligne du fichier 3 (client, adresse, panier, commande selon statut).
- * Regles metier: statut strict, total commande > 0, coherence produit/declinaison.
- * Parametres: row, idx, maps de reference, etats et transporteur par defaut.
- * Retour: Promise<partial results + errors>.
+ * Traite une ligne d'import (client + adresse + panier + éventuelle commande).
+ *
+ * Paramètres:
+ * - `row` (object), `idx` (number), `productMap`, `combinationMap`, `combinationPriceMap`, `orderStates`, `defaultCarrierId`.
+ *
+ * Retour: Promise<object> — structure contenant customers/addresses/orders/orderDetails ou erreurs.
  */
 const processRow = async (row, idx, productMap, combinationMap, combinationPriceMap, orderStates, defaultCarrierId) => {
     const i = idx
@@ -223,12 +266,14 @@ const processRow = async (row, idx, productMap, combinationMap, combinationPrice
 }
 
 /**
- * Execute l'import complet du fichier 3 (clients + commandes).
- * Parametres: file, file1Results, file2Results, onProgress.
- * Retour: Promise<results>.
+ * Exécute l'import du fichier 3 (création clients, adresses, paniers et commandes).
+ *
+ * Paramètres:
+ * - `file` (File), `file1Results` (object), `file2Results` (object), `onProgress` (function).
+ *
+ * Retour: Promise<object> — résultat complet de l'import.
  */
 export const importFile3 = async (file, file1Results, file2Results, onProgress = () => {}) => {
-	// Etape 1: initialiser les resultats et parser le CSV.
     const results = { customers: [], addresses: [], orders: [], orderDetails: [], errors: [], summary: {} }
 
     onProgress?.({ step: 'parsing', message: 'Parsing du CSV fichier 3...' })
@@ -236,7 +281,6 @@ export const importFile3 = async (file, file1Results, file2Results, onProgress =
 
     if (!csvData || csvData.length === 0) throw new Error('Fichier CSV vide')
 
-	// Etape 2: construire les maps de reference produits et combinaisons.
     const productMap = {}
     for (const p of file1Results.products ?? []) {
         if (p.status === 'success' && p.id) productMap[p.reference] = { id: p.id, name: p.name, priceHT: p.priceHT, taxRate: p.taxRate }
@@ -253,7 +297,6 @@ export const importFile3 = async (file, file1Results, file2Results, onProgress =
         }
     }
 
-	// Etape 3: charger etats de commande et transporteur actif.
     const orderStateClass = new OrderState('', false)
     const orderStates = await orderStateClass.getAll()
     const carrierClass = new Carrier('', false)
@@ -261,7 +304,6 @@ export const importFile3 = async (file, file1Results, file2Results, onProgress =
     const activeCarrier = carriers.find(c => Number(c.active) === 1 && Number(c.deleted || 0) === 0)
     const defaultCarrierId = activeCarrier?.id || 1
 
-	// Etape 4: traiter chaque ligne et fusionner les resultats partiels.
     for (let idx = 0; idx < csvData.length; idx++) {
         try {
             const row = csvData[idx]
@@ -279,7 +321,6 @@ export const importFile3 = async (file, file1Results, file2Results, onProgress =
         }
     }
 
-	// Etape 5: construire le resume final.
     results.summary = {
         totalCustomers: results.customers.length,
         successCustomers: results.customers.filter(c => c.status === 'success').length,
@@ -293,6 +334,12 @@ export const importFile3 = async (file, file1Results, file2Results, onProgress =
     }
 
     onProgress?.({ step: 'complete', message: 'Import Fichier 3 termine!' })
+
+    // Si des erreurs ont été accumulées, relancer une exception pour déclencher le reset
+    if (results.errors.length > 0) {
+        const errorSummary = results.errors.join('\n')
+        throw new Error(`Erreurs lors de l'import fichier 3 (commandes/clients):\n${errorSummary}`)
+    }
 
     return results
 }

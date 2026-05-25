@@ -3,6 +3,15 @@ import StockAvailable from "../entities/StockAvailable.js";
 import Combination from "../entities/Combination.js";
 import ProductOptionValue from "../entities/ProductOptionValue.js";
 
+/**
+ * Récupère tous les produits avec leurs informations de stock et déclinaisons.
+ *
+ * Paramètres: aucun.
+ * Retour: Promise<Array> — chaque élément contient { product, totalQuantity, declinations }.
+ *
+ * Règles métier:
+ * - Pour chaque produit, récupère `stockAvailables` et mappe les déclinaisons.
+ */
 export async function fetchProductWithStock() {
     const productApi = new Product({}, false);
     const stockApi = new StockAvailable({}, false);
@@ -57,4 +66,108 @@ export async function fetchProductWithStock() {
     }
 
     return result;
+}
+
+/**
+ * Filtre une liste de produits par fourchette de prix.
+ *
+ * Paramètres:
+ * - `products` (Array): liste de produits possédant `priceTtc` ou `price`.
+ * - `minPrice` (number): valeur minimale (>=0).
+ * - `maxPrice` (number): valeur maximale (>=0).
+ *
+ * Retour: Array — produits filtrés.
+ */
+export function filterProductsByPrice(products, minPrice = 0, maxPrice = 0) {
+    const priceMin = Math.max(0, Number(minPrice) || 0);
+    const priceMax = Math.max(0, Number(maxPrice) || 0);
+
+    return products.filter((product) => {
+        const price = Number(product.priceTtc ?? product.price) || 0;
+
+        if (priceMin > 0 && price < priceMin) {
+            return false;
+        }
+
+        if (priceMax > 0 && price > priceMax) {
+            return false;
+        }
+
+        return true;
+    });
+}
+
+/**
+ * Filtre une liste de produits par catégorie (id ou catégorie par défaut).
+ *
+ * Paramètres:
+ * - `products` (Array): produits avec `idCategoryDefault` ou `associations.categories`.
+ * - `categoryId` (string|number): identifiant cible.
+ *
+ * Retour: Array — produits appartenant à la catégorie.
+ */
+export function filterProductsByCategory(products, categoryId) {
+    const targetId = String(categoryId);
+    return products.filter((product) => {
+        if (product.idCategoryDefault != null && String(product.idCategoryDefault) === targetId) {
+            return true;
+        }
+
+        const categories = product.associations?.categories || [];
+
+        for (const category of categories) {
+            const id = category?.id ?? category;
+            if (String(id) === targetId) {
+                return true;
+            }
+        }
+        return false;
+    });
+}
+
+/**
+ * Filtre une liste de produits par nom (recherche insensible à la casse).
+ *
+ * Paramètres:
+ * - `products` (Array): liste de produits.
+ * - `name` (string): chaîne recherchée.
+ *
+ * Retour: Array — produits correspondants.
+ */
+export function filterProductsByName(products, name = "") {
+    return products.filter((product) => {
+        const productName = product.name?.[0]?.value || "";
+
+        if (productName.toLowerCase().includes(name.toLowerCase())) {
+            return true;
+        }
+        return false;
+    });
+}
+
+/**
+ * Filtre combiné des produits par nom, catégorie et fourchette de prix.
+ *
+ * Paramètres:
+ * - `products` (Array): liste de produits.
+ * - `minPrice`, `maxPrice`, `categoryId`, `name` — critères de filtrage.
+ *
+ * Retour: Array — produits filtrés.
+ */
+export function filterProducts({products, minPrice = 0, maxPrice = 0, categoryId = null, name = ""}) {
+    let filtered = Array.isArray(products) ? products : [];
+
+    if (name) {
+        filtered = filterProductsByName(filtered, name);
+    }
+
+    if (categoryId) {
+        filtered = filterProductsByCategory(filtered, categoryId);
+    }
+
+    if (Number(minPrice) > 0 || Number(maxPrice) > 0) {
+        filtered = filterProductsByPrice(filtered, minPrice, maxPrice);
+    }
+
+    return filtered;
 }

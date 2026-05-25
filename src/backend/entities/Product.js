@@ -5,6 +5,7 @@ import TaxRule from "./TaxRule"
 import Tax from "./Tax"
 import Combination from "./Combination"
 import StockAvailable from "./StockAvailable"
+import Category from "./Category"
 
 const buildImageUrl = (productId, imageId) => {
 	const baseUrl = import.meta.env.VITE_PRESTASHOP_BACKEND_URL || ""
@@ -442,10 +443,9 @@ class Product {
 		})
 	}
 
-	async getBadge() {
-		const baseDateValue = this.availableDate
+	getBadge() {
+		const baseDate = new Date(this.availableDate)
 
-		const baseDate = new Date(baseDateValue)
 		if (Number.isNaN(baseDate.getTime())) {
 			return null
 		}
@@ -464,8 +464,13 @@ class Product {
 		}
 
 		const now = new Date()
-		const diffTime = Math.abs(now - baseDate)
-		const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+		// Supprime l'heure
+		baseDate.setHours(0, 0, 0, 0)
+		now.setHours(0, 0, 0, 0)
+
+		const diffTime = now - baseDate
+		const diffDays = diffTime / (1000 * 60 * 60 * 24)
 
 		for (const badge of Object.values(badges)) {
 			if (diffDays <= badge.days) {
@@ -474,6 +479,40 @@ class Product {
 		}
 
 		return null
+	}
+
+	async getCategory() {
+		if (!this.idCategoryDefault) {
+			return null
+		}
+		const categoryApi = new Category({}, false)
+		return await categoryApi.getById(this.idCategoryDefault)
+	}
+
+	async getByApi(fieldName, value = this[fieldName]) {
+		const filter = buildApiFilterQuery(fieldName, value)
+
+		if (!filter) {
+			return []
+		}
+
+		const xml = await api.get(`${this.endpoint}?display=full${filter}`)
+		const orders = toJSONList(xml)
+
+		return orders.map((orderData) => Order.fromData(orderData))
+	}
+
+	// API-side inverse filter: request items where fieldName is NOT in value
+	async getByNotApi(fieldName, value = this[fieldName]) {
+		const values = Array.isArray(value) ? value : value instanceof Set ? Array.from(value) : [value]
+		const normalized = values.map((v) => String(v).trim()).filter((s) => s !== "")
+
+		if (normalized.length === 0) return []
+
+		const filter = `&filter[${fieldName}]=![${normalized.join("|")}]`
+		const xml = await api.get(`${this.endpoint}?display=full${filter}`)
+		const orders = toJSONList(xml)
+		return orders.map((orderData) => Order.fromData(orderData))
 	}
 }
 

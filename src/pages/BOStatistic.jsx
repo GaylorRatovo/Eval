@@ -15,11 +15,14 @@ import {MaterialReactTable, useMaterialReactTable} from "material-react-table"
 import {getDisplayText, toInt} from "../backend/utils/utils.js";
 
 /**
- * Page de statistiques BackOffice.
- * Regles metier: exclut les commandes annulees et calcule les KPI par categorie avec filtres date.
- * Methode: charge les datasets bruts puis derive plusieurs vues analytiques via useMemo.
- * Parametres: aucun.
- * Retour: JSX avec 3 tableaux analytiques (ventes, cout stock, disponibilite stock).
+ * Page BackOffice: statistiques et métriques (ventes, coûts, disponibilité de stock).
+ *
+ * Paramètres: aucun.
+ * Retour: JSX — tables et filtres basés sur les DTOs de métriques.
+ *
+ * Règles métier:
+ * - Charge produits, catégories, mouvements, stocks et commandes non annulées.
+ * - Calcule métriques agrégées via les DTOs `OrderLineMetrics`, `OrderCategoryMetrics`, etc.
  */
 function BOStatistic() {
     const [loading, setLoading] = useState(true)
@@ -36,7 +39,6 @@ function BOStatistic() {
     //const [test, setTest] = useState([])
 
     useEffect(() => {
-		// Etape 1: chargement initial des donnees de reference (produits, categories, commandes, stocks).
         const load = async () => {
             try {
                 setLoading(true)
@@ -56,7 +58,6 @@ function BOStatistic() {
 
                 const orderGroups = OrderWithDetails.groupOrdersWithDetails(orders, orderDetailsRaw)
 
-                // Etape 2: hydrater les etats de travail qui serviront aux calculs derives.
                 setproductsWithDecl(productsWithDecl)
                 setCategories(categories)
                 setOrders(orders)
@@ -66,10 +67,8 @@ function BOStatistic() {
 
                 //setTest(orderLineMetrics)
             } catch (err) {
-                // Etape 3: remonter une erreur lisible en cas d'echec API.
                 setError(err?.message || "Erreur lors du chargement")
             } finally {
-                // Etape 4: fin du chargement quelle que soit l'issue.
                 setLoading(false)
             }
         }
@@ -79,7 +78,6 @@ function BOStatistic() {
 
     const formatNumber = (value) => Number(value ?? 0).toFixed(2)
 
-	// Etape 5: filtrer commandes et mouvements par plage de dates.
     const orderFiltered = useMemo(
         () => OrderWithDetails.filterGroupsByDate(baseOrderGroups, dateMin, dateMax),
         [baseOrderGroups, dateMin, dateMax])
@@ -92,14 +90,12 @@ function BOStatistic() {
         () => StockMvt.filterByDateRange(mvtStock, null, dateMax),
         [mvtStock, dateMax])
 
-	// Etape 6: calcul des indicateurs ventes/achats par categorie depuis les lignes de commande.
     const orderCategoryMetrics = useMemo(() => {
         const orderLineMetrics = OrderLineMetrics.listFromOrderGroups(orderFiltered, productsWithDecl)
         const orderLineMetricsGroupedByProduct = OrderLineMetrics.groupByProductAndCombinationLines(orderLineMetrics)
         return OrderCategoryMetrics.groupByCategoryFromProductLines(orderLineMetricsGroupedByProduct)
     }, [orderFiltered, productsWithDecl])
 
-	// Etape 7: calcul des couts par categorie bases sur les mouvements de stock.
     const orderCategoryMetricsFromStock = useMemo(() => {
         const orderLineMetricsFromStock = OrderLineMetrics.listFromProductsWithStockMovements(
             orderFiltered,
@@ -110,7 +106,6 @@ function BOStatistic() {
         return OrderCategoryMetrics.groupByCategoryFromTotals(orderLineMetricsFromStock)
     }, [orderFiltered, mvtFiltered, productsWithDecl, stockAvailables])
 
-	// Etape 8: calcul de la disponibilite stock (physique, reserve, dispo) par categorie.
     const stockCategoryMetrics = useMemo(() => {
         const stockAvailabilityMetrics = StockProductAvailability.listFromProductsAndStockData(
             mvtFilteredWithoutMin,
@@ -282,85 +277,54 @@ function BOStatistic() {
         data: stockCategoryMetrics,
     })
 
-    /**
-     * Reinitialise le filtre date.
-     * Parametres: aucun.
-     * Retour: void.
-     */
     const resetDateFilter = () => {
         setDateMin("");
         setDateMax("");
     }
 
     return (
-        <div className="d-flex flex-column gap-4">
-            <div>
-                <h4 className="mb-1">Statistiques</h4>
-                <p className="text-muted mb-0">Analyse des ventes et disponibilites stock.</p>
-            </div>
+        <div>
+            <h1>Statistiques</h1>
 
-            {loading && <p className="text-muted">Chargement...</p>}
-            {!loading && error && <div className="alert alert-danger" role="alert">{error}</div>}
+            {loading && <p>Chargement...</p>}
+            {!loading && error && <p>{error}</p>}
 
             {!loading && !error && (
-                <>
-                    <div className="card">
-                        <div className="card-body">
-                            <div className="row g-3 align-items-end">
-                                <div className="col-md-4">
-                                    <label className="form-label">Date min</label>
-                                    <input
-                                        className="form-control"
-                                        type="date"
-                                        value={dateMin}
-                                        onChange={(event) => setDateMin(event.target.value)}
-                                    />
-                                </div>
-                                <div className="col-md-4">
-                                    <label className="form-label">Date max</label>
-                                    <input
-                                        className="form-control"
-                                        type="date"
-                                        value={dateMax}
-                                        onChange={(event) => setDateMax(event.target.value)}
-                                    />
-                                </div>
-                                <div className="col-md-4">
-                                    <button className="btn btn-outline-secondary w-100" onClick={resetDateFilter}>
-                                        Reset filtre date
-                                    </button>
-                                </div>
-                            </div>
+                <div>
+                    <div>
+                        <div>
+                            date min
+                            <input
+                                type="date"
+                                value={dateMin}
+                                onChange={(event) => setDateMin(event.target.value)}
+                            />
                         </div>
-                    </div>
 
-                    <div className="card">
-                        <div className="card-header">
-                            <h6 className="mb-0">Commandes par categorie</h6>
+                        <div>
+                            date max
+                            <input
+                                type="date"
+                                value={dateMax}
+                                onChange={(event) => setDateMax(event.target.value)}
+                            />
                         </div>
-                        <div className="card-body">
-                            <MaterialReactTable table={table}/>
-                        </div>
-                    </div>
 
-                    <div className="card">
-                        <div className="card-header">
-                            <h6 className="mb-0">Commande par categorie (cout depuis mouvements)</h6>
-                        </div>
-                        <div className="card-body">
-                            <MaterialReactTable table={stockCostTable}/>
-                        </div>
+                        <button onClick={resetDateFilter}>
+                            Reset filtre date
+                        </button>
                     </div>
+                    <MaterialReactTable table={table}/>
 
-                    <div className="card">
-                        <div className="card-header">
-                            <h6 className="mb-0">Disponibilite stock</h6>
-                        </div>
-                        <div className="card-body">
-                            <MaterialReactTable table={stockTable}/>
-                        </div>
-                    </div>
-                </>
+                    <h3>Commande par categorie (cout depuis mouvements)</h3>
+                    <MaterialReactTable table={stockCostTable}/>
+
+                    {/* <h3>Test</h3>
+                    <MaterialReactTable table={stockCostTableTest} /> */}
+
+                    <h3>Disponibilite Stock</h3>
+                    <MaterialReactTable table={stockTable}/>
+                </div>
             )}
         </div>
     )

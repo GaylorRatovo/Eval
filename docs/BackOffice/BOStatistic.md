@@ -1,53 +1,52 @@
 # BOStatistic
 
-## 1. Présentation générale
-- Rôle : Fournir des statistiques détaillées (ventes par catégorie, disponibilité stock, coûts) avec filtres par date.
-- Problème métier : Aider à la prise de décision (achat, promotions, réapprovisionnement).
-- Utilisateurs : Responsables analytique, stock, achat.
+## Présentation générale
+`BOStatistic.jsx` produit des statistiques avancées sur les ventes, les coûts et la disponibilité du stock par catégorie. C'est la page d'analyse la plus dense du BackOffice.
 
-## 2. Fonctionnement utilisateur
-1. La page charge produits, catégories, mouvements de stock et commandes.
-2. L'utilisateur ajuste `dateMin` / `dateMax` pour filtrer.
-3. Les métriques sont recalculées via `useMemo` (pas via rechargement API).
-4. Plusieurs tableaux MaterialReactTable affichent : ventes par catégorie, coût depuis mouvements, disponibilité stock.
-5. Des totaux en pied de colonnes sont affichés pour les KPI principaux.
+## Fonctionnement utilisateur
+1. La page charge produits, catégories, commandes, détails de commande, mouvements de stock et stocks disponibles.
+2. L'utilisateur choisit une plage de dates.
+3. Les métriques sont recalculées localement avec `useMemo`.
+4. Trois tableaux présentent les ventes par catégorie, les coûts calculés depuis les mouvements, et la disponibilité stock.
+5. Les pieds de tableaux affichent les totaux.
 
-## 3. Flux de données
+## Flux de données
 Utilisateur
     ↓
-`BOStatistic.jsx` (date filters)
+`BOStatistic.jsx`
     ↓
-Entities/DTOs : `Product`, `Category`, `Order`, `OrderDetail`, `StockMvt`, `StockAvailable`, `ProductWithCombinations`, `OrderWithDetails`, `OrderLineMetrics`, `OrderCategoryMetrics`, `StockProductAvailability`.
+Entities et DTOs : `Product`, `Category`, `Order`, `OrderDetail`, `StockMvt`, `StockAvailable`, `ProductWithCombinations`, `OrderWithDetails`, `OrderLineMetrics`, `OrderCategoryMetrics`, `StockProductAvailability`, `StockCategoryAvailability`
     ↓
-Transformations : filtrage par date, groupBy, calculs (vente, achat, bénéfice, quantités physiques/réservées/disponibles), agrégations de totaux.
+Agrégations locales : filtrage par date, regroupement par catégorie, calculs de bénéfice et de stock
 
-## 4. Logique métier
-- Quoi : Croiser commandes, produits et mouvements de stock pour produire des métriques par catégorie.
-- Comment : Lecture massive via entities, transformation en DTOs, agrégation et groupBy.
-- Pourquoi : Mesurer performances et risques stock.
-- Quand : Au chargement et à tout changement des dates.
+## Logique métier
+La page croise les ventes et les coûts afin d'estimer la rentabilité par catégorie. Elle ne dépend pas d'une API de statistiques dédiée : tout est reconstruit à partir des entités du projet.
 
-Vérifications métier : exclusion d'états annulés sur les commandes; conversion et formatage des nombres.
+Les commandes annulées sont écartées, et les valeurs sont normalisées pour éviter les erreurs de format numérique.
 
-## 5. Explication du code
-- Composant : `BOStatistic.jsx` — orchestration des lectures et calculs, rendu via `MaterialReactTable`.
-- Hooks : `useEffect` (chargement initial), `useMemo` (filtres + métriques + colonnes + totaux), `useState` (états de données).
-- DTO/Entities : nombreux DTOs pour structurer les données et faciliter les agrégations.
+## Explication du code
+`useEffect` charge les données brutes. `useMemo` construit les métriques dérivées. `useMaterialReactTable` transforme les tableaux de données en vues interactives. Les colonnes sont calculées avec des fonctions d'accès et des pieds de colonne pour les totaux.
 
-## 6. Analogies
-Comme un tableau de bord financier par département qui croise ventes, coûts et stock disponible.
+Fonctions clés du fichier : filtrage des commandes par date, construction des métriques de catégorie, calcul des coûts depuis les mouvements de stock, agrégation des disponibilités.
 
-## 7. Exemples concrets
-- Filtrer un mois → afficher ventes totales par catégorie et comparer avec coûts pour estimer bénéfice.
+## Analogies simples
+Comme un tableau de bord de direction qui compare les ventes réelles, le coût de revient et les stocks disponibles par rayon.
 
-## 8. Relations avec PrestaShop
-- Ressources : `products`, `categories`, `orders`, `order_details`, `stock_movements`, `stock_availables`.
-- Endpoints : lecture intensive via les wrappers `entities/*`.
+## Exemples concrets
+- Choisir le mois dernier permet de voir quelles catégories ont généré le plus de bénéfice.
+- Comparer la colonne de coût et la colonne de vente aide à détecter les produits peu rentables.
 
-## 9. Dépendances
-- DTOs: `OrderLineMetrics`, `OrderCategoryMetrics`, `StockProductAvailability`, `StockCategoryAvailability`.
-- Entities: `Product`, `Category`, `Order`, `StockMvt`, `StockAvailable`.
+## Relations avec PrestaShop
+Ressources utilisées : `products`, `categories`, `orders`, `order_details`, `stock_movements`, `stock_availables`.
 
-## 10. Résumé
-- Résumé métier : Outil d'analyse pour ventes et disponibilité stock par catégorie.
-- Résumé technique : Charge une base de données locale en mémoire puis recalcule toutes les vues analytiques avec `useMemo` à chaque changement de filtre date.
+## Dépendances
+- `material-react-table`
+- `src/backend/dto/*`
+- `src/backend/entities/*`
+
+## Voir aussi
+- [StockMvtService](services/StockMvtService.md)
+- [ProductService](services/ProductService.md)
+
+## Résumé
+Page d'analyse métier avancée, entièrement reconstruite à partir des données PrestaShop et recalculée côté client.

@@ -7,6 +7,24 @@ import {toDayKey} from "../utils/parsing.js";
 // Retourne l'historique des mouvements de stock d'un produit/déclinaison, agrégé par jour.
 // Retour : Promise<Array<EnrichedBucket>> (voir enrichWithReservations pour la forme).
 // Tableau trié chronologiquement, vide si aucun mouvement ni réservation.
+/**
+ * Retourne l'historique des mouvements de stock d'un produit/déclinaison, agrégé par jour.
+ *
+ * Paramètres:
+ * - `idProduct` (number): identifiant du produit.
+ * - `idProductAttribute` (number): identifiant de la déclinaison (0 pour le produit global).
+ * - `productDetails` (object|null): détails pré-calculés pour éviter des requêtes supplémentaires.
+ *
+ * Retour: Promise<Array<EnrichedBucket>> — tableau trié chronologiquement (voir `enrichWithReservations`).
+ *
+ * Règles métier:
+ * - Si `idProductAttribute` > 0, agrège les mouvements pour cette déclinaison uniquement.
+ * - Si le produit a des déclinaisons, agrège toutes les déclinaisons.
+ * - Sinon, agrège les mouvements du produit simple.
+ *
+ * Exemple:
+ * const rows = await getDailyMovement(12, 0, null)
+ */
 export async function getDailyMovement(idProduct, idProductAttribute, productDetails = null) {
     const attrId = Number(idProductAttribute) || 0
 
@@ -52,6 +70,14 @@ export async function getDailyMovementWithoutDeclination(idProduct, idProductAtt
 //   movements: StockMvt[], // mouvements bruts du jour
 //   final:     number,   // stock physique cumulé en fin de journée
 // }
+/**
+ * Agrège une liste de mouvements bruts par jour et calcule les totaux.
+ *
+ * Paramètres:
+ * - `movements` (Array<StockMvt>): mouvements triés ou non.
+ *
+ * Retour: Array<DayBucket> trié par date croissante.
+ */
 function aggregateByDay(movements) {
     const sorted = [...movements].sort((a, b) => {
         const dateA = a.dateAdd ?? ""
@@ -103,6 +129,15 @@ function aggregateByDay(movements) {
 //  - produit simple           -> { 0 }
 //
 // Retour : Set<number> (jamais vide ; au pire { 0 } pour un produit simple).
+/**
+ * Détermine l'ensemble des `productAttributeId` valides selon le contexte.
+ *
+ * Paramètres:
+ * - `idProductAttribute` (number): déclinaison ciblée (0 si non spécifique).
+ * - `productDetails` (object|null): détails contenant `declinations`.
+ *
+ * Retour: Set<number> — identifiants valides (au moins {0}).
+ */
 function resolveAllowedAttrIds(idProductAttribute, productDetails) {
     // déclinaison précise
     const attrId = Number(idProductAttribute) || 0
@@ -312,6 +347,14 @@ export async function getDailyMovementWithDeclinations(idProduct, idProductAttri
 //
 // Retour : Promise<Array<{combinationId: number}>> ; tableau vide si le produit
 // n'a aucune déclinaison référencée dans associations.stockAvailables.
+/**
+ * Récupère les `combinationId` (déclinaisons) d'un produit depuis PrestaShop.
+ *
+ * Paramètres:
+ * - `idProduct` (number): identifiant du produit.
+ *
+ * Retour: Promise<Array<{combinationId:number}>> — tableau vide si aucune déclinaison.
+ */
 async function fetchDeclinationsFromDb(idProduct) {
     const product = await new Product({}, false).getById(idProduct)
     const entries = product.associations?.stockAvailables ?? []

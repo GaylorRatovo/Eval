@@ -1,69 +1,58 @@
 # BODashboard
 
-## 1. Présentation générale
-- Rôle : Afficher des indicateurs commerciaux journaliers (commandes et paniers) et permettre le filtrage par dates et statut.
-- Problème métier : Donner une vue synthétique des ventes et des paniers non convertis pour le suivi quotidien.
-- Contexte d'utilisation : Utilisé par un administrateur BackOffice pour suivre l'activité commerciale.
-- Utilisateurs : Administrateurs / responsables ventes.
+## Présentation générale
+La page `BODashboard.jsx` affiche les indicateurs quotidiens du BackOffice : nombre de commandes, total HT/TTC, nombre de paniers sans commande, et vue journalière des volumes. Elle sert à suivre l'activité commerciale sans modifier les données.
 
-## 2. Fonctionnement utilisateur
-1. L'utilisateur ouvre la page `BODashboard`.
-2. Les données (commandes, paniers, états de commande) sont chargées via `loadDashboardData()`.
-3. L'utilisateur sélectionne un intervalle de dates et/ou un statut de commande.
-4. Les tableaux et totaux se mettent à jour automatiquement.
-5. L'utilisateur peut réinitialiser les filtres.
+## Fonctionnement utilisateur
+1. L'utilisateur ouvre la page.
+2. `useEffect` déclenche `loadDashboardData()`.
+3. Les commandes, paniers et états de commande sont chargés une seule fois.
+4. Les filtres `dateMin`, `dateMax` et `statusId` recalculent instantanément les tableaux.
+5. Le bouton de réinitialisation remet les filtres à l'état initial.
 
-## 3. Flux de données
+## Flux de données
 Utilisateur
     ↓
-Page React `BODashboard.jsx`
+`BODashboard.jsx`
     ↓
-Hooks `useEffect`, `useMemo`
+`DashboardService.loadDashboardData()`
     ↓
-Service `DashboardService.loadDashboardData()`
+Entities et DTOs : `Category`, `Product`, `Order`, `OrderDetail`, `OrderState`, `Cart`, `OrderDashboardDTO`, `OrderLineMetrics`
     ↓
-DTO / Entities: `Order`, `OrderDetail`, `OrderState`, `Cart`
-    ↓
-(Backend PrestaShop via classes `entities/*`)
+Agrégations locales : `filterDashboardRowsByDates`, `filterDashboardRowsByStatus`, `aggregateDashboardRowsByDay`, `sumDashboardRowsTotals`
 
-Paramètres transmis : filtres `dateMin`, `dateMax`, `statusId`.
-Réponses reçues : tableaux `dashboardRows`, `cartDashboardRows`, liste `orderStates`.
-Transformations : agrégation journalière, somme des totaux HT/TTC.
+Paramètres transmis : dates de filtre et statut sélectionné.
+Résultats affichés : totaux agrégés, lignes journalières, paniers journaliers.
 
-## 4. Logique métier
-- Quoi : Agréger et filtrer commandes et paniers pour afficher indicateurs journaliers et totaux.
-- Comment : `loadDashboardData()` récupère commandes, produits, catégories et paniers; fonctions utilitaires calculent totaux et agrègent par jour.
-- Pourquoi : Permettre un suivi rapide de la performance commerciale.
-- Quand : Au chargement de la page et à chaque modification des filtres.
-- Prérequis : Accès aux données PrestaShop (orders, carts, order_states).
-- Conséquences : Affichage de tableaux synthétiques et possibilité d'investigation via composants.
+## Logique métier
+`loadDashboardData()` exclut les commandes annulées, récupère les paniers sans commande, puis transforme les données brutes en lignes exploitables par l'interface. Les calculs sont dérivés côté client pour éviter de recharger l'API à chaque filtre.
 
-Vérifications métier : filtrage par état (exclusion d'états annulés côté service), conversion TTC→HT lors du calcul.
+Cette page ne fait aucune écriture. Elle ne sert qu'à lire, agréger et présenter les données.
 
-## 5. Explication du code
-- Composant : `BODashboard.jsx` — gère l'état (loading, error, filtres), appelle `loadDashboardData` et calcule les agrégations.
-- Hooks : `useEffect` (chargement initial), `useMemo` (calculs dérivés pour performance).
-- Services : `DashboardService` — collecte données via `entities/*`, construit DTOs `OrderDashboardDTO`.
-- DTO : `OrderDashboardDTO`, `OrderLineMetrics` — servent à normaliser les lignes du dashboard.
-- Utilitaires : `dashboardUtils.formatAmount`, `getOrderStateLabel` pour affichage.
+## Explication du code
+`useEffect` charge les données au montage. `useMemo` évite de recalculer les agrégations tant que les entrées n'ont pas changé. `BODashboardTable` rend les tableaux réutilisables, avec un comptage configurable pour les commandes ou les paniers.
 
-## 6. Analogies simples
-Comme un tableau de bord de magasin : nombre de tickets (commandes), chiffre d'affaires HT/TTC, et paniers en attente.
+Fonctions utilisées : `loadDashboardData`, `filterDashboardRowsByDates`, `filterDashboardRowsByStatus`, `aggregateDashboardRowsByDay`, `aggregateCartDashboardRowsByDay`, `sumDashboardRowsTotals`, `sumCartDashboardRowsTotals`, `countDashboardRows`.
 
-## 7. Exemples concrets
-- Filtrer du 2026-05-01 au 2026-05-15 et statut "Livré" → afficher les totaux et courbes journalières correspondantes.
+## Analogies simples
+Comme le tableau de bord d'un magasin : le nombre de tickets, le chiffre d'affaires, et les paniers restés au stade de brouillon.
 
-## 8. Relations avec PrestaShop
-- Ressources : `orders`, `order_details`, `order_states`, `carts`, `products`.
-- Endpoints/Opérations : lecture via wrappers `entities/*` (`getAll`, `getBy`, `getById`).
-- Impact : lecture seule (aucune modification effectuée depuis cette page).
+## Exemples concrets
+- Filtrer du `2026-05-01` au `2026-05-15` avec le statut `Livré` affiche uniquement les commandes livrées sur la période.
+- Réinitialiser les filtres remet immédiatement tous les totaux globaux.
 
-## 9. Dépendances
-- `BODashboardTable` (composant d'affichage)
-- `DashboardService` (fonctions de calcul et agrégation)
-- DTOs : `OrderDashboardDTO`, `OrderLineMetrics`
+## Relations avec PrestaShop
+Ressources utilisées : `orders`, `order_details`, `order_states`, `carts`, `products`, `categories`.
+La page consomme uniquement les lectures exposées par les entités du projet.
 
-## 10. Résumé
-- Résumé métier : Vue synthétique des ventes et des paniers pour suivi.
-- Résumé technique : Charge les données via `DashboardService`, calcule agrégations et rend `BODashboardTable`.
-- Points importants : Calculs TTC→HT, exclusion d'états annulés, performance via `useMemo`.
+## Dépendances
+- `src/backend/services/DashboardService.js`
+- `src/components/BODashboardTable.jsx`
+- `src/backend/utils/dashboardUtils.js`
+
+## Voir aussi
+- [DashboardService](services/DashboardService.md)
+- [BODashboardTable](components/BODashboardTable.md)
+
+## Résumé
+Page d'analyse commerciale en lecture seule, centrée sur les agrégations journalières et les filtres de consultation.

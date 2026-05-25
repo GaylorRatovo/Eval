@@ -2,11 +2,32 @@ import {useState} from "react";
 import executeImport from "../backend/services/import/executeImport.js";
 
 /**
- * Page d'import BackOffice (produits, declinaisons, commandes, images).
- * Regles metier: le fichier produits est obligatoire pour initialiser le referentiel.
- * Methode: collecte les fichiers utilisateur puis appelle l'orchestrateur d'import.
- * Parametres: aucun.
- * Retour: JSX du formulaire d'import et resultat.
+ * Composant BackOffice d'import de données (produits, déclinaisons, commandes et images).
+ *
+ * Paramètres:
+ * - Aucun. Ce composant React lit uniquement son état interne et les fichiers choisis par l'utilisateur.
+ *
+ * Type de résultat:
+ * - JSX.Element. Rend un formulaire d'upload, les messages d'erreur et le résultat brut de l'import.
+ *
+ * Ce que fait la fonction:
+ * - Affiche les champs de sélection des fichiers CSV et ZIP.
+ * - Pilote l'état de l'import: fichiers sélectionnés, exécution en cours, erreur et résultat.
+ * - Délègue l'exécution réelle à `executeImport`.
+ *
+ * Règles métier:
+ * - Les fichiers attendus sont: produits en CSV, déclinaisons/stock initial en CSV, clients/commandes en CSV, images en ZIP.
+ * - L'import réel n'est effectué que si l'option `doImport` est activée.
+ * - En cas d'échec du service d'import, le message d'erreur est affiché à l'utilisateur.
+ *
+ * Fonctionnement:
+ * - L'utilisateur sélectionne les fichiers.
+ * - Au submit, `handleSubmit` appelle `executeImport` avec les fichiers et l'état `doImport`.
+ * - Le composant affiche soit l'erreur, soit le résultat JSON retourné par le service.
+ *
+ * Exemple d'utilisation:
+ * - Input: `<BOImport />`
+ * - Output attendu: un formulaire permettant de choisir les fichiers et de lancer l'import.
  */
 function BOImport() {
     const [productFile, setProductFile] = useState(null)
@@ -18,21 +39,42 @@ function BOImport() {
     const [isImporting, setIsImporting] = useState(false)
     const [doImport, setDoImport] = useState(false)
 
-	/**
-	 * Soumet le lot d'import.
-	 * Regles metier: nettoie l'etat precedent, execute la sequence, remonte erreurs explicites.
-	 * Parametres: event (submit du formulaire).
-	 * Retour: Promise<void>.
-	 */
+    /**
+     * Soumet les fichiers sélectionnés au service d'import.
+     *
+     * Paramètres:
+     * - `event` (SubmitEvent): événement de soumission du formulaire. Il est annulé avec `preventDefault()`.
+     *
+     * Type de résultat:
+     * - Promise<void>. La fonction ne renvoie pas de valeur exploitable et met à jour l'état du composant.
+     *
+     * Ce que fait la fonction:
+     * - Réinitialise l'état d'erreur et le résultat précédent.
+     * - Passe le composant en mode "import en cours".
+     * - Appelle `executeImport` avec les fichiers choisis et l'option `doImport`.
+     * - Stocke le résultat ou l'erreur selon l'issue de l'appel.
+     *
+     * Règles métier:
+     * - Le submit ne déclenche jamais un rechargement de page.
+     * - Le service d'import reçoit exactement les fichiers sélectionnés par l'utilisateur.
+     * - L'import réel dépend de la valeur de `doImport`; sinon le service peut fonctionner en mode contrôle ou prévisualisation.
+     *
+     * Fonctionnement:
+     * - L'événement de formulaire est intercepté.
+     * - Les états UI sont remis à zéro pour éviter d'afficher un ancien résultat.
+     * - La promesse retournée par `executeImport` pilote l'affichage du succès ou de l'échec.
+     *
+     * Exemple d'utilisation:
+     * - Input: un événement de submit sur un formulaire contenant les fichiers produits, déclinaisons, commandes et images.
+     * - Output attendu: soit `importResult` rempli avec le retour du service, soit `importError` contenant le message d'échec.
+     */
     const handleSubmit = async (event) => {
-		// Etape 1: bloquer le comportement navigateur et reinitialiser les retours precedent.
         event.preventDefault()
         setImportError(null)
         setImportResult(null)
         setIsImporting(true)
 
         try {
-			// Etape 2: lancer l'import orchestre avec callback de progression.
             const result = await executeImport({
                 productFile,
                 declinaisonFile,
@@ -42,93 +84,69 @@ function BOImport() {
                 onProgress: (progress) => console.log(progress),
             })
 
-			// Etape 3: exposer le resultat brut pour analyse detaillee.
             setImportResult(result)
         } catch (error) {
-			// Etape 4: afficher une erreur utilisateur comprehensible.
             setImportError(error?.message ?? 'Erreur inconnue')
         } finally {
-			// Etape 5: remettre l'interface en mode normal.
             setIsImporting(false)
         }
     }
 
     return (
-        <div className="d-flex flex-column gap-4">
+        <form onSubmit={handleSubmit}>
             <div>
-                <h4 className="mb-1">Import des donnees</h4>
-                <p className="text-muted mb-0">Charger les fichiers CSV et ZIP pour initialiser la base.</p>
+                <label>
+                    <span>Produits</span>
+                    <input
+                        type={"file"}
+                        placeholder={"Produits"}
+                        accept={".csv"}
+                        onChange={(event) => setProductFile(event.target.files?.[0] ?? null)}
+                    />
+                </label>
+                {productFile && <p>{productFile.name}</p>}
+                <label>
+                    <span>Déclinaisons & Stock initiaux</span>
+                    <input
+                        type={"file"}
+                        placeholder={"Produits"}
+                        accept={".csv"}
+                        onChange={(event) => setDeclinaisonFile(event.target.files?.[0] ?? null)}
+                    />
+                </label>
+                {declinaisonFile && <p>{declinaisonFile.name}</p>}
+                <label>
+                    <span>Clients & Commandes</span>
+                    <input
+                        type={"file"}
+                        placeholder={"Produits"}
+                        accept={".csv"}
+                        onChange={(event) => setOrdersFile(event.target.files?.[0] ?? null)}
+                    />
+                </label>
+                {ordersFile && <p>{ordersFile.name}</p>}
+                <label>
+                    <span>Images</span>
+                    <input type="checkbox"
+                        checked={doImport}
+                        onChange={(event) => setDoImport(event.target.checked)}
+                    />
+                    <input
+                        type={"file"}
+                        placeholder={"Produits"}
+                        accept={".zip"}
+                        onChange={(event) => setImageZipFile(event.target.files?.[0] ?? null)}
+                    />
+                </label>
+                {imageZipFile && <p>{imageZipFile.name}</p>}
+                <button type={"submit"} disabled={isImporting}>
+                    {isImporting ? 'Import en cours...' : 'Importer'}
+                </button>
             </div>
-            <div className="card">
-                <div className="card-body">
-                    <form onSubmit={handleSubmit} className="row g-3">
-                        <div className="col-md-6">
-                            <label className="form-label">Produits</label>
-                            <input
-                                className="form-control"
-                                type={"file"}
-                                placeholder={"Produits"}
-                                accept={".csv"}
-                                onChange={(event) => setProductFile(event.target.files?.[0] ?? null)}
-                            />
-                            {productFile && <div className="form-text">{productFile.name}</div>}
-                        </div>
-                        <div className="col-md-6">
-                            <label className="form-label">Declinaisons & Stock initiaux</label>
-                            <input
-                                className="form-control"
-                                type={"file"}
-                                placeholder={"Produits"}
-                                accept={".csv"}
-                                onChange={(event) => setDeclinaisonFile(event.target.files?.[0] ?? null)}
-                            />
-                            {declinaisonFile && <div className="form-text">{declinaisonFile.name}</div>}
-                        </div>
-                        <div className="col-md-6">
-                            <label className="form-label">Clients & Commandes</label>
-                            <input
-                                className="form-control"
-                                type={"file"}
-                                placeholder={"Produits"}
-                                accept={".csv"}
-                                onChange={(event) => setOrdersFile(event.target.files?.[0] ?? null)}
-                            />
-                            {ordersFile && <div className="form-text">{ordersFile.name}</div>}
-                        </div>
-                        <div className="col-md-6">
-                            <label className="form-label">Images</label>
-                            <div className="d-flex align-items-center gap-2 mb-2">
-                                <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    checked={doImport}
-                                    onChange={(event) => setDoImport(event.target.checked)}
-                                />
-                                <span className="text-muted">Importer le ZIP d'images</span>
-                            </div>
-                            <input
-                                className="form-control"
-                                type={"file"}
-                                placeholder={"Produits"}
-                                accept={".zip"}
-                                onChange={(event) => setImageZipFile(event.target.files?.[0] ?? null)}
-                            />
-                            {imageZipFile && <div className="form-text">{imageZipFile.name}</div>}
-                        </div>
-                        <div className="col-12">
-                            <button className="btn btn-primary" type={"submit"} disabled={isImporting}>
-                                {isImporting ? 'Import en cours...' : 'Importer'}
-                            </button>
-                        </div>
-                    </form>
 
-                    {importError && <div className="alert alert-danger mt-3">{importError}</div>}
-                    {importResult && (
-                        <pre className="mt-3 mb-0">{JSON.stringify(importResult, null, 2)}</pre>
-                    )}
-                </div>
-            </div>
-        </div>
+            {importError && <p>{importError}</p>}
+            {importResult && <pre>{JSON.stringify(importResult, null, 2)}</pre>}
+        </form>
     )
 }
 
