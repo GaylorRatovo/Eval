@@ -293,48 +293,74 @@ function BOStatistic() {
     }
 
     return (
-        <div>
-            <h1>Statistiques</h1>
+        <div className="d-flex flex-column gap-4">
+            <div>
+                <h4 className="mb-1">Statistiques</h4>
+                <p className="text-muted mb-0">Analyse des ventes et disponibilites stock.</p>
+            </div>
 
-            {loading && <p>Chargement...</p>}
-            {!loading && error && <p>{error}</p>}
+            {loading && <p className="text-muted">Chargement...</p>}
+            {!loading && error && <div className="alert alert-danger" role="alert">{error}</div>}
 
             {!loading && !error && (
-                <div>
-                    <div>
-                        <div>
-                            date min
-                            <input
-                                type="date"
-                                value={dateMin}
-                                onChange={(event) => setDateMin(event.target.value)}
-                            />
+                <>
+                    <div className="card">
+                        <div className="card-body">
+                            <div className="row g-3 align-items-end">
+                                <div className="col-md-4">
+                                    <label className="form-label">Date min</label>
+                                    <input
+                                        className="form-control"
+                                        type="date"
+                                        value={dateMin}
+                                        onChange={(event) => setDateMin(event.target.value)}
+                                    />
+                                </div>
+                                <div className="col-md-4">
+                                    <label className="form-label">Date max</label>
+                                    <input
+                                        className="form-control"
+                                        type="date"
+                                        value={dateMax}
+                                        onChange={(event) => setDateMax(event.target.value)}
+                                    />
+                                </div>
+                                <div className="col-md-4">
+                                    <button className="btn btn-outline-secondary w-100" onClick={resetDateFilter}>
+                                        Reset filtre date
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-
-                        <div>
-                            date max
-                            <input
-                                type="date"
-                                value={dateMax}
-                                onChange={(event) => setDateMax(event.target.value)}
-                            />
-                        </div>
-
-                        <button onClick={resetDateFilter}>
-                            Reset filtre date
-                        </button>
                     </div>
-                    <MaterialReactTable table={table}/>
 
-                    <h3>Commande par categorie (cout depuis mouvements)</h3>
-                    <MaterialReactTable table={stockCostTable}/>
+                    <div className="card">
+                        <div className="card-header">
+                            <h6 className="mb-0">Commandes par categorie</h6>
+                        </div>
+                        <div className="card-body">
+                            <MaterialReactTable table={table}/>
+                        </div>
+                    </div>
 
-                    {/* <h3>Test</h3>
-                    <MaterialReactTable table={stockCostTableTest} /> */}
+                    <div className="card">
+                        <div className="card-header">
+                            <h6 className="mb-0">Commande par categorie (cout depuis mouvements)</h6>
+                        </div>
+                        <div className="card-body">
+                            <MaterialReactTable table={stockCostTable}/>
+                        </div>
+                    </div>
 
-                    <h3>Disponibilite Stock</h3>
-                    <MaterialReactTable table={stockTable}/>
-                </div>
+                    <div className="card">
+                        <div className="card-header">
+                            <h6 className="mb-0">Disponibilite stock</h6>
+                        </div>
+                        <div className="card-body">
+                            <MaterialReactTable table={stockTable}/>
+                        </div>
+                    </div>
+                </>
             )}
         </div>
     )

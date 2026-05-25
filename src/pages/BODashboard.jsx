@@ -88,79 +88,118 @@ function BODashboard() {
 	}
 
 	return (
-		<div>
-			<h1>BODashboard</h1>
+		<div className="d-flex flex-column gap-4">
+			<div>
+				<h4 className="mb-1">Dashboard</h4>
+				<p className="text-muted mb-0">Vue globale des commandes et paniers.</p>
+			</div>
 
-			{loading && <p>Chargement...</p>}
-			{!loading && error && <p>{error}</p>}
+			{loading && <p className="text-muted">Chargement...</p>}
+			{!loading && error && <div className="alert alert-danger" role="alert">{error}</div>}
 
 			{!loading && !error && (
-				<div>
-					<section>
-						<div>
-							<div>Nombre de commandes</div>
-							<strong>{ordersCount}</strong>
+				<>
+					<div className="row g-3">
+						<div className="col-md-4">
+							<div className="card">
+								<div className="card-body">
+									<div className="text-muted">Nombre de commandes</div>
+									<h4 className="mb-0">{ordersCount}</h4>
+								</div>
+							</div>
 						</div>
-						<div>
-							<div>Total HT commandes</div>
-							<strong>{formatAmount(totals.totalHT)}</strong>
+						<div className="col-md-4">
+							<div className="card">
+								<div className="card-body">
+									<div className="text-muted">Total HT commandes</div>
+									<h4 className="mb-0">{formatAmount(totals.totalHT)}</h4>
+								</div>
+							</div>
 						</div>
-						<div>
-							<div>Total TTC commandes</div>
-							<strong>{formatAmount(totals.totalTTC)}</strong>
+						<div className="col-md-4">
+							<div className="card">
+								<div className="card-body">
+									<div className="text-muted">Total TTC commandes</div>
+									<h4 className="mb-0">{formatAmount(totals.totalTTC)}</h4>
+								</div>
+							</div>
 						</div>
-					</section>
+					</div>
 
-					<section>
-						<div>
-							<div>Nombre de paniers sans commande</div>
-							<strong>{cartCount}</strong>
+					<div className="row g-3">
+						<div className="col-md-4">
+							<div className="card">
+								<div className="card-body">
+									<div className="text-muted">Paniers sans commande</div>
+									<h4 className="mb-0">{cartCount}</h4>
+								</div>
+							</div>
 						</div>
-						<div>
-							<div>Total HT paniers</div>
-							<strong>{formatAmount(cartTotals.totalHT)}</strong>
+						<div className="col-md-4">
+							<div className="card">
+								<div className="card-body">
+									<div className="text-muted">Total HT paniers</div>
+									<h4 className="mb-0">{formatAmount(cartTotals.totalHT)}</h4>
+								</div>
+							</div>
 						</div>
-						<div>
-							<div>Total TTC paniers</div>
-							<strong>{formatAmount(cartTotals.totalTTC)}</strong>
+						<div className="col-md-4">
+							<div className="card">
+								<div className="card-body">
+									<div className="text-muted">Total TTC paniers</div>
+									<h4 className="mb-0">{formatAmount(cartTotals.totalTTC)}</h4>
+								</div>
+							</div>
 						</div>
-					</section>
+					</div>
 
-					<section>
-						<label>
-							<div>Date min</div>
-							<input type="date" value={dateMin} onChange={(event) => setDateMin(event.target.value)} />
-						</label>
-						<label>
-							<div>Date max</div>
-							<input type="date" value={dateMax} onChange={(event) => setDateMax(event.target.value)} />
-						</label>
-						<label>
-							<div>Status</div>
-							<select value={statusId} onChange={(event) => setStatusId(event.target.value)}>
-								<option value="all">Tous les statuts</option>
-								{orderStates.map((state) => (
-									<option key={state.id} value={state.id}>
-										{getOrderStateLabel(state)}
-									</option>
-								))}
-							</select>
-						</label>
-						<div>
-							<button type="button" onClick={resetFilters}>Reset filtres</button>
+					<div className="card">
+						<div className="card-body">
+							<div className="row g-3 align-items-end">
+								<div className="col-md-3">
+									<label className="form-label">Date min</label>
+									<input className="form-control" type="date" value={dateMin} onChange={(event) => setDateMin(event.target.value)} />
+								</div>
+								<div className="col-md-3">
+									<label className="form-label">Date max</label>
+									<input className="form-control" type="date" value={dateMax} onChange={(event) => setDateMax(event.target.value)} />
+								</div>
+								<div className="col-md-4">
+									<label className="form-label">Status</label>
+									<select className="form-select" value={statusId} onChange={(event) => setStatusId(event.target.value)}>
+										<option value="all">Tous les statuts</option>
+										{orderStates.map((state) => (
+											<option key={state.id} value={state.id}>
+												{getOrderStateLabel(state)}
+											</option>
+										))}
+									</select>
+								</div>
+								<div className="col-md-2">
+									<button className="btn btn-outline-secondary w-100" type="button" onClick={resetFilters}>Reset filtres</button>
+								</div>
+							</div>
 						</div>
-					</section>
+					</div>
 
-					<section>
-						<h3>Commandes journalières</h3>
-						<BODashboardTable rows={dailyRows} />
-					</section>
+					<div className="card">
+						<div className="card-header">
+							<h6 className="mb-0">Commandes journalieres</h6>
+						</div>
+						<div className="card-body">
+							<BODashboardTable rows={dailyRows} />
+						</div>
+					</div>
 
-					<section>
-						<h3>Paniers journaliers</h3>
-						<BODashboardTable rows={cartDailyRows} countHeader="Paniers" countKey="cartsCount" />
-					</section>
-				</div>
+					<div className="card">
+						<div className="card-header">
+							<h6 className="mb-0">Paniers journaliers</h6>
+						</div>
+						<div className="card-body">
+							<BODashboardTable rows={cartDailyRows} countHeader="Paniers" countKey="cartsCount" />
+						</div>
+					</div>
+				</>
 			)}
 		</div>
 	)

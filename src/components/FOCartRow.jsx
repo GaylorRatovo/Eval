@@ -79,6 +79,7 @@ function FOCartRow({ row, index, onOptionChange, onQuantityChange, onDelete, for
                         src={row.productImageURL}
                         alt={row.productImageURL}
                         width="120"
+                        className="rounded"
                     />
                 ) : (
                     "-"
@@ -86,7 +87,7 @@ function FOCartRow({ row, index, onOptionChange, onQuantityChange, onDelete, for
             </td>
             <td>
                 {options.length > 0 ? (
-                    <select value={selectedOptionId} onChange={handleChange}>
+                    <select className="form-select form-select-sm" value={selectedOptionId} onChange={handleChange}>
                         {options.map((value) => (
                             <option key={value.id} value={value.id}>
                                 {value.label || ""}
@@ -100,13 +101,15 @@ function FOCartRow({ row, index, onOptionChange, onQuantityChange, onDelete, for
             <td>{row.stockQuantity ?? "-"}</td>
             <td>{formatPrice(getRowDisplayedPrice(row))}</td>
             <td>
-                <button type="button" onClick={handleDecrease}>-</button>
-                <input type="number" value={row.quantity} readOnly min={1} />
-                <button type="button" onClick={handleIncrease}>+</button>
+                <div className="input-group input-group-sm">
+                    <button className="btn btn-outline-secondary" type="button" onClick={handleDecrease}>-</button>
+                    <input className="form-control text-center" type="number" value={row.quantity} readOnly min={1} />
+                    <button className="btn btn-outline-secondary" type="button" onClick={handleIncrease}>+</button>
+                </div>
             </td>
             <td>{formatPrice(getRowLineTotal(row))}</td>
             <td>
-                <button type="button" onClick={() => onDelete?.(index, row?.cartRowIndex)}>
+                <button className="btn btn-sm btn-outline-danger" type="button" onClick={() => onDelete?.(index, row?.cartRowIndex)}>
                     Supprimer
                 </button>
             </td>

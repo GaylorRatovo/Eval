@@ -122,38 +122,53 @@ function FOOrderList() {
     }))
 
     return (
-        <>
-            <h1>Liste de tous les commandes</h1>
+        <div className="d-flex flex-column gap-4">
+            <div>
+                <h4 className="mb-1">Mes commandes</h4>
+                <p className="text-muted mb-0">Consultez l'historique et vos paniers en attente.</p>
+            </div>
 
-            {isLoading ? (
-                <p>Chargements des clients</p>
-            ) : (
-                <FOOrderRow
-                    title="Commandes"
-                    rows={orders}
-                    edit={edit}
-                    multiplicateur={1}
-                    onChange={handleChange}
-                    onClick={handleClick}
-                    actionMode="order"
-                />
-            )}
+            <div className="card">
+                <div className="card-header">
+                    <h6 className="mb-0">Commandes</h6>
+                </div>
+                <div className="card-body">
+                    {isLoading ? (
+                        <p className="text-muted">Chargements des clients</p>
+                    ) : (
+                        <FOOrderRow
+                            title=""
+                            rows={orders}
+                            edit={edit}
+                            multiplicateur={1}
+                            onChange={handleChange}
+                            onClick={handleClick}
+                            actionMode="order"
+                        />
+                    )}
+                </div>
+            </div>
 
-            <h2>Mes paniers sans commande</h2>
-
-            {isLoading ? (
-                <p>Chargements des paniers</p>
-            ) : (
-                <FOOrderRow
-                    title="Paniers"
-                    rows={cartRows}
-                    edit={edit}
-                    onChange={handleChange}
-                    onClick={handleCommanderClick}
-                    actionMode="cart"
-                />
-            )}
-        </>
+            <div className="card">
+                <div className="card-header">
+                    <h6 className="mb-0">Paniers sans commande</h6>
+                </div>
+                <div className="card-body">
+                    {isLoading ? (
+                        <p className="text-muted">Chargements des paniers</p>
+                    ) : (
+                        <FOOrderRow
+                            title=""
+                            rows={cartRows}
+                            edit={edit}
+                            onChange={handleChange}
+                            onClick={handleCommanderClick}
+                            actionMode="cart"
+                        />
+                    )}
+                </div>
+            </div>
+        </div>
     )
 }
 

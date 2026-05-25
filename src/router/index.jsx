@@ -12,6 +12,7 @@ import FOGuestCheckout from "../pages/FOGuestCheckout.jsx";
 import BOStock from "../pages/BOStock.jsx";
 import BOLogin from "../pages/BOLogin.jsx";
 import FOCart from "../pages/FOCart.jsx";
+import NotFoundPage from "../pages/NotFoundPage.jsx";
 
 import BOStatistic from "../pages/BOStatistic.jsx";
 import BODashboard from "../pages/BODashboard.jsx";
@@ -82,5 +83,9 @@ export const router = createBrowserRouter([
                 element: <FOGuestCheckout />
             }
         ]
+    },
+    {
+        path: "*",
+        element: <NotFoundPage />
     }
 ])

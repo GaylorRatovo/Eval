@@ -83,30 +83,33 @@ function BOStockEvolution({combination, productDetails}) {
 
     // Etape 5: rendre filtres de date et tableau d'evolution.
     return <div>
-        <header>
-            <h4>Evolution de stock</h4>
-            <div>
-                <label>
-                    Du
-                    <input
-                        type={"date"}
-                        value={dateFrom}
-                        max={dateTo || undefined}
-                        onChange={(e) => setDateFrom(e.target.value)}
-                    />
-                </label>
-                <label>
-                    Au
-                    <input
-                        type={"date"}
-                        value={dateTo}
-                        min={dateFrom || undefined}
-                        onChange={(e) => setDateTo(e.target.value)}
-                    />
-                </label>
-            </div>
-            <MaterialReactTable table={table} />
+        <header className="mb-3">
+            <h5 className="mb-1">Evolution de stock</h5>
+            <p className="text-muted mb-0">Suivi journalier des mouvements.</p>
         </header>
+        <div className="row g-3 mb-3">
+            <div className="col-md-6">
+                <label className="form-label">Du</label>
+                <input
+                    className="form-control"
+                    type={"date"}
+                    value={dateFrom}
+                    max={dateTo || undefined}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                />
+            </div>
+            <div className="col-md-6">
+                <label className="form-label">Au</label>
+                <input
+                    className="form-control"
+                    type={"date"}
+                    value={dateTo}
+                    min={dateFrom || undefined}
+                    onChange={(e) => setDateTo(e.target.value)}
+                />
+            </div>
+        </div>
+        <MaterialReactTable table={table} />
     </div>
 }
 

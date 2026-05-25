@@ -329,52 +329,74 @@ function FOCart() {
         return <p>pas de panier</p>;
     }
 
-    return <>
-        <h1>Panier : {cart.id}</h1>
+    return (
+        <div className="row g-4">
+            <div className="col-lg-8">
+                <div className="card">
+                    <div className="card-header d-flex align-items-center justify-content-between">
+                        <h5 className="mb-0">Mon panier</h5>
+                        <span className="badge bg-label-primary">#{cart.id}</span>
+                    </div>
+                    <div className="card-body">
+                        {rowDetails.length === 0 ? (
+                            <p className="text-muted">Panier vide</p>
+                        ) : (
+                            <div className="table-responsive">
+                                <table className="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Nom</th>
+                                            <th>Reference</th>
+                                            <th>Image</th>
+                                            <th>Declinaison</th>
+                                            <th>Stock</th>
+                                            <th>Prix TTC</th>
+                                            <th>Quantite</th>
+                                            <th>Total ligne</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
 
-        {rowDetails.length === 0 ? (
-            <p>panier vide</p>
-        ) : (
-            <>
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Nom</th>
-                        <th>Reference</th>
-                        <th>Image</th>
-                        <th>Declinaison</th>
-                        <th>Stock</th>
-                        <th>Prix TTC</th>
-                        <th>Quantite</th>
-                        <th>Total ligne</th>
-                        <th>Action</th>
-                    </tr>
-                    </thead>
+                                    <tbody>
+                                        {rowDetails.map((row, index) => (
+                                            <FOCartRow
+                                                key={getRowKey(row, index)}
+                                                row={row}
+                                                index={index}
+                                                onOptionChange={handleOptionChange}
+                                                onQuantityChange={handleQuantityChange}
+                                                onDelete={handleDeleteRow}
+                                                formatPrice={formatPrice}
+                                            />
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
 
-                    <tbody>
-                    {rowDetails.map((row, index) => (
-                        <FOCartRow
-                            key={getRowKey(row, index)}
-                            row={row}
-                            index={index}
-                            onOptionChange={handleOptionChange}
-                            onQuantityChange={handleQuantityChange}
-                            onDelete={handleDeleteRow}
-                            formatPrice={formatPrice}
-                        />
-                    ))}
-                    </tbody>
-                </table>
-
-                <p>Total HT : {formatPrice(totals.totalHt)}</p>
-                <p>Total TTC : {formatPrice(totals.totalTtc)}</p>
-
-                <button onClick={handleCheckout}>
-                    Commander
-                </button>
-            </>
-        )}
-    </>;
+            <div className="col-lg-4">
+                <div className="card">
+                    <div className="card-body">
+                        <h6 className="mb-3">Resume</h6>
+                        <div className="d-flex justify-content-between mb-2">
+                            <span>Total HT</span>
+                            <span>{formatPrice(totals.totalHt)}</span>
+                        </div>
+                        <div className="d-flex justify-content-between mb-3">
+                            <span>Total TTC</span>
+                            <span className="fw-bold text-primary">{formatPrice(totals.totalTtc)}</span>
+                        </div>
+                        <button className="btn btn-primary w-100" onClick={handleCheckout}>
+                            Commander
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export default FOCart;

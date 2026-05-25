@@ -134,64 +134,90 @@ function FOProductPreview() {
         return <h1>Produit introuvable</h1>;
 
     return (
-        <>
-            <h1>Apperçu du produit : {id}</h1>
+        <div className="row g-4">
+            <div className="col-lg-6">
+                <div className="card h-100">
+                    <div className="card-body">
+                        <div className="d-flex align-items-center justify-content-between mb-3">
+                            <h4 className="mb-0">{product.name?.[0]?.value}</h4>
+                            {badge ? (
+                                <span className="badge bg-label-primary">{badge.label}</span>
+                            ) : null}
+                        </div>
 
-            {imageUrl ? (
-                <img
-                    src={imageUrl}
-                    alt={imageUrl}
-                    width="160"
-                />
-            ) : (
-                <p>no image</p>
-            )}
+                        <div className="ratio ratio-4x3 rounded overflow-hidden bg-label-secondary">
+                            {imageUrl ? (
+                                <img src={imageUrl} alt={product.name?.[0]?.value || "product"} />
+                            ) : (
+                                <div className="d-flex align-items-center justify-content-center text-muted">
+                                    Pas d'image
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            <h2>name : {product.name?.[0]?.value}</h2>
-            {badge ? (
-                <h2 style={{ color: badge.color }}>{badge.label}</h2>
-            ) : null}
-            <h2>reference : {product.reference}</h2>
-            <h2>price TTC : {displayedPrice.toFixed(2)}</h2>
-            <h2>stock : {stockQuantity ?? "-"}</h2>
+            <div className="col-lg-6">
+                <div className="card h-100">
+                    <div className="card-body">
+                        <p className="text-muted mb-1">Reference {product.reference}</p>
+                        <h3 className="text-primary mb-3">{displayedPrice.toFixed(2)} TTC</h3>
 
-            {declinaisons?.values?.length ? (
-                <>
-                    <h2>Declinaison :</h2>
+                        <div className="d-flex align-items-center gap-3 mb-4">
+                            <span className="badge bg-label-success">Stock {stockQuantity ?? "-"}</span>
+                            <span className="text-muted">Livraison 48h</span>
+                        </div>
 
-                    <select
-                        name="option"
-                        onChange={handleDeclinaisonChange}
-                        value={selectedDeclinaison?.id ?? declinaisons.values[0]?.id}
-                    >
-                        {declinaisons.values.map((v) => (
-                            <option key={v.id} value={v.id}>
-                                {v.label || ""}
-                            </option>
-                        ))}
-                    </select>
-                </>
-            ) : null}
+                        {declinaisons?.values?.length ? (
+                            <div className="mb-4">
+                                <label className="form-label">Declinaison</label>
+                                <select
+                                    name="option"
+                                    className="form-select"
+                                    onChange={handleDeclinaisonChange}
+                                    value={selectedDeclinaison?.id ?? declinaisons.values[0]?.id}
+                                >
+                                    {declinaisons.values.map((v) => (
+                                        <option key={v.id} value={v.id}>
+                                            {v.label || ""}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : null}
 
-            <h2>
-                <p>Quantite : </p>
-                <button onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
-                <input type="number" value={quantity} readOnly min={1} />
-                <button
-                    onClick={() => {
-                        const stock = Number(stockQuantity ?? 0);
-                        const next = quantity + 1;
-                        setQuantity(stock > 0 ? Math.min(next, stock) : next);
-                    }}
-                >
-                    +
-                </button>
-            </h2>
+                        <div className="mb-4">
+                            <label className="form-label">Quantite</label>
+                            <div className="input-group">
+                                <button className="btn btn-outline-secondary" type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
+                                <input className="form-control text-center" type="number" value={quantity} readOnly min={1} />
+                                <button
+                                    className="btn btn-outline-secondary"
+                                    type="button"
+                                    onClick={() => {
+                                        const stock = Number(stockQuantity ?? 0);
+                                        const next = quantity + 1;
+                                        setQuantity(stock > 0 ? Math.min(next, stock) : next);
+                                    }}
+                                >
+                                    +
+                                </button>
+                            </div>
+                        </div>
 
-            <button onClick={handleAjouterPanier}>
-                Ajouter au panier
-            </button>
-        </>
+                        <div className="d-flex flex-wrap gap-2">
+                            <button className="btn btn-primary" onClick={handleAjouterPanier}>
+                                Ajouter au panier
+                            </button>
+                            <button className="btn btn-outline-secondary" type="button">
+                                Ajouter aux favoris
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 }
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link,useNavigate } from 'react-router-dom';
 
 /**
  * Page de connexion BackOffice (mode prototype local).
@@ -47,13 +47,45 @@ function BOLogin() {
     }
 
     return (
-        <div>
-            <h1>Connexion Backoffice</h1>
-            <form onSubmit={handleSubmit}>
-                <input type="text" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} />
-                <button type="submit">Se connecter</button>
-            </form>
+        <div className="container-xxl">
+            <div className="row justify-content-center">
+                <div className="col-md-6 col-lg-5">
+                    <div className="card mt-5">
+                        <div className="card-body">
+                            <div className="text-center mb-4">
+                                <h4 className="mb-1">Connexion Backoffice</h4>
+                                <p className="text-muted">Acces reserve a l'equipe EvalShop</p>
+                            </div>
+                            <form onSubmit={handleSubmit} className="d-grid gap-3">
+                                <div>
+                                    <label className="form-label">Email</label>
+                                    <input
+                                        className="form-control"
+                                        type="text"
+                                        placeholder="Email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="form-label">Mot de passe</label>
+                                    <input
+                                        className="form-control"
+                                        type="password"
+                                        placeholder="Mot de passe"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                    />
+                                </div>
+                                <button className="btn btn-primary" type="submit">Se connecter</button>
+                            </form>
+                            <div className="text-center mt-3">
+                                <Link className="text-body" to="/fo">Aller au FrontOffice</Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

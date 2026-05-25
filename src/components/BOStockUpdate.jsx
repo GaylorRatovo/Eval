@@ -78,6 +78,7 @@ function BOStockUpdate({setCombination, setProductDetails}) {
 
                 return (
                     <input
+                        className="form-control form-control-sm"
                         type={"number"}
                         value={quantity[row.id] ?? ""}
                         onChange={(e) =>
@@ -93,14 +94,14 @@ function BOStockUpdate({setCombination, setProductDetails}) {
         {
             header: "Actions",
             Cell: ({row}) => (
-                <div>
-                    <button onClick={() => updateQuantity(row, ID_MVT_REASON.AUGMENTATION)}>
+                <div className="d-flex flex-wrap gap-2">
+                    <button className="btn btn-sm btn-primary" onClick={() => updateQuantity(row, ID_MVT_REASON.AUGMENTATION)}>
                         Ajouter
                     </button>
-                    <button onClick={() => updateQuantity(row, ID_MVT_REASON.DIMINUTION)}>
+                    <button className="btn btn-sm btn-outline-danger" onClick={() => updateQuantity(row, ID_MVT_REASON.DIMINUTION)}>
                         Retirer
                     </button>
-                    <button onClick={() => {
+                    <button className="btn btn-sm btn-outline-secondary" onClick={() => {
                         const isDeclination = Boolean(row.original?.isDeclination)
                         const product = isDeclination ? row.original.parentProduct : row.original.product
                         const idProductAttribute = isDeclination ? (row.original.combinationId ?? 0) : 0
@@ -191,18 +192,18 @@ function BOStockUpdate({setCombination, setProductDetails}) {
 
     // Etape 8: rendre la zone de date puis le tableau d'edition stock.
     return <>
-        <header>
-            <h5>Mise à jour des stocks</h5>
+        <header className="mb-3">
+            <h5 className="mb-1">Mise a jour des stocks</h5>
+            <p className="text-muted mb-0">Ajouter ou retirer des quantites, puis suivre l'historique.</p>
         </header>
-        <div>
-            <label>
-                Date de changement
-                <input
-                    type={"date"}
-                    value={dateChange}
-                    onChange={(e) => setDateChange(e.target.value)}
-                />
-            </label>
+        <div className="mb-3">
+            <label className="form-label">Date de changement</label>
+            <input
+                className="form-control"
+                type={"date"}
+                value={dateChange}
+                onChange={(e) => setDateChange(e.target.value)}
+            />
         </div>
         <MaterialReactTable table={table}/>
     </>

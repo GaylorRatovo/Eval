@@ -90,27 +90,36 @@ function BOOrderList() {
     
 
     return(
-        <>
-            <h1>Liste de tous les commandes</h1>
+        <div className="d-flex flex-column gap-4">
+            <div>
+                <h4 className="mb-1">Commandes</h4>
+                <p className="text-muted mb-0">Mise a jour des etats et suivi des commandes.</p>
+            </div>
             {actionResult && (
-                <div style={{ marginBottom: "20px", padding: "10px", border: "1px solid", backgroundColor: actionResult.success ? "#d4edda" : "#f8d7da", color: actionResult.success ? "#155724" : "#721c24" }}>
+                <div className={`alert ${actionResult.success ? "alert-success" : "alert-danger"}`} role="alert">
                     {actionResult.success ? (
-                        <>Commande {actionResult.orderId} mise à jour avec succès à l'état {actionResult.orderStateId}. Dernier historique : {actionResult.orderHistory ? `ID ${actionResult.orderHistory.id} à ${actionResult.orderHistory.dateAdd}` : "Aucun historique trouvé"}.</>
+                        <>Commande {actionResult.orderId} mise a jour avec succes a l'etat {actionResult.orderStateId}. Dernier historique : {actionResult.orderHistory ? `ID ${actionResult.orderHistory.id} a ${actionResult.orderHistory.dateAdd}` : "Aucun historique trouve"}.</>
                     ) : (
-                        <>Erreur lors de la mise à jour de la commande {actionResult.orderId} : {actionResult.error}</>
+                        <>Erreur lors de la mise a jour de la commande {actionResult.orderId} : {actionResult.error}</>
                     )}
                 </div>
             )}
-            {isLoading ? (<p>Chargements des clients</p>) : (
-                <BOOrderRow
-                    title="Commandes"
-                    rows={orders}
-                    edit={edit}
-                    onChange={handleChange}
-                    onClick={handleClick}
-                />
-            )}
-        </>
+            <div className="card">
+                <div className="card-body">
+                    {isLoading ? (
+                        <p className="text-muted">Chargements des clients</p>
+                    ) : (
+                        <BOOrderRow
+                            title=""
+                            rows={orders}
+                            edit={edit}
+                            onChange={handleChange}
+                            onClick={handleClick}
+                        />
+                    )}
+                </div>
+            </div>
+        </div>
     )
 
 }

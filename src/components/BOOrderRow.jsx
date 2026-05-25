@@ -23,25 +23,25 @@ function OrderActionCell({ cell, table }) {
     const dateValue = isSelected ? (meta.edit?.dateUpdate || baseDate) : baseDate
 
     return (
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+        <div className="d-flex flex-wrap gap-2 align-items-center">
             <select
+                className="form-select form-select-sm"
                 name="orderStateId"
                 onChange={meta.onChange?.(rowId)}
                 value={isSelected ? (meta.edit?.orderStateId ?? currentStateId) : currentStateId}
-                style={{ padding: "4px" }}
             >
-                <option value="">Sélectionner un état</option>
-                <option value="5">Livré</option>
-                <option value="6">Annulé</option>
+                <option value="">Selectionner un etat</option>
+                <option value="5">Livre</option>
+                <option value="6">Annule</option>
             </select>
             <input
+                className="form-control form-control-sm"
                 type="date"
                 name="dateUpdate"
                 onChange={meta.onChange?.(rowId)}
                 value={dateValue}
-                style={{ padding: "4px" }}
             />
-            <button type="button" onClick={() => meta.onClick?.(rowId)} style={{ padding: "4px 8px" }}>
+            <button className="btn btn-sm btn-primary" type="button" onClick={() => meta.onClick?.(rowId)}>
                 Modifier
             </button>
         </div>
@@ -120,7 +120,7 @@ function BOOrderRow({
     // Etape 4: rendre le composant table.
     return (
         <section>
-            {title ? <h3>{title}</h3> : null}
+            {title ? <h3 className="mb-3">{title}</h3> : null}
             <MaterialReactTable table={table} />
         </section>
     )

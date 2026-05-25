@@ -24,14 +24,15 @@ function OrderActionCell({ cell, table }) {
         const dateValue = isSelected ? (meta.edit?.cartDateOrder || baseDate) : baseDate
 
         return (
-            <div>
+            <div className="d-flex flex-column gap-2">
                 <input
+                    className="form-control form-control-sm"
                     type="date"
                     name="cartDateOrder"
                     onChange={meta.onChange?.(rowId, true)}
                     value={dateValue}
                 />
-                <button type="button" onClick={() => meta.onClick?.(rowId)}>
+                <button className="btn btn-sm btn-primary" type="button" onClick={() => meta.onClick?.(rowId)}>
                     Commander
                 </button>
             </div>
@@ -42,20 +43,22 @@ function OrderActionCell({ cell, table }) {
     const multiplicateurValue = isSelected ? (meta.edit?.multiplicateur ?? meta.multiplicateur ?? 1) : (meta.multiplicateur ?? 1)
 
     return (
-        <div>
+        <div className="d-flex flex-column gap-2">
             <input
+                className="form-control form-control-sm"
                 type="number"
                 name="multiplicateur"
                 onChange={meta.onChange?.(rowId, false)}
                 value={multiplicateurValue}
             />
             <input
+                className="form-control form-control-sm"
                 type="date"
                 name="dateUpdate"
                 onChange={meta.onChange?.(rowId, false)}
                 value={dateValue}
             />
-            <button type="button" onClick={() => meta.onClick?.(rowId)}>
+            <button className="btn btn-sm btn-outline-primary" type="button" onClick={() => meta.onClick?.(rowId)}>
                 Dupliquer la commande
             </button>
         </div>
@@ -138,7 +141,7 @@ function FOOderRow({
     // Etape 4: rendre le composant.
     return (
         <section>
-            {title ? <h3>{title}</h3> : null}
+            {title ? <h3 className="mb-3">{title}</h3> : null}
             <MaterialReactTable table={table} />
         </section>
     )

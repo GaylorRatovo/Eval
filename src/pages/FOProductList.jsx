@@ -56,50 +56,83 @@ function FOProductList() {
         loadProducts();
     }, []);
 
+    const getBadgeClass = (badge) => {
+        if (!badge?.label) {
+            return "product-badge product-badge-new";
+        }
+        const label = badge.label.toLowerCase();
+        if (label.includes("new") || label.includes("nouveau")) {
+            return "product-badge product-badge-new";
+        }
+        if (label.includes("hot") || label.includes("promo")) {
+            return "product-badge product-badge-hot";
+        }
+        return "product-badge product-badge-new";
+    };
+
     return (
         <div>
-            <h1>Product List</h1>
-            <table>
-                <thead>
-                <tr>
-                    <th>image</th>
-                    <th>Name</th>
-                    <th>Reference</th>
-                    <th>Stock total</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                {products.map((product) => (
-                    <tr key={product.id}>
-                        <td>
-                            {imageUrls[product.id] ? (
-                                <img
-                                    src={imageUrls[product.id]}
-                                    alt={imageUrls[product.id]}
-                                    width="80"
-                                />
-                            ) : (
-                                "no image"
-                            )}
-                        </td>
-                        <td>
-                            {product.name[0].value}
-                            {badges[product.id] ? (
-                                <span style={{ color: badges[product.id].color }}>
-                                    {` (${badges[product.id].label})`}
-                                </span>
-                            ) : null}
-                        </td>
-                        <td>{product.reference}</td>
-                        <td>{product.quantity}</td>
-                        <td>
-                            <button onClick={() => handlePreview(product.id)}>Appercu</button>
-                        </td>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
+            <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div>
+                    <h4 className="mb-1">Catalogue</h4>
+                    <p className="text-muted mb-0">Decouvrez nos produits et leurs disponibilites.</p>
+                </div>
+                <div className="d-flex gap-2">
+                    <button className="btn btn-outline-secondary" type="button">Trier</button>
+                    <button className="btn btn-primary" type="button">Nouveautes</button>
+                </div>
+            </div>
+
+            <div className="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+                {products.map((product) => {
+                    const badge = badges[product.id];
+                    const rawPrice = Number(product?.price ?? 0);
+                    const priceLabel = Number.isFinite(rawPrice) ? rawPrice.toFixed(2) : "-";
+                    return (
+                        <div className="col" key={product.id}>
+                            <div className="card h-100 product-card">
+                                <div className="product-card-media">
+                                    {badge ? (
+                                        <span className={getBadgeClass(badge)}>
+                                            <span className="product-badge-icon">★</span>
+                                            {badge.label}
+                                        </span>
+                                    ) : null}
+                                    {imageUrls[product.id] ? (
+                                        <img
+                                            src={imageUrls[product.id]}
+                                            alt={product.name?.[0]?.value || "product"}
+                                        />
+                                    ) : (
+                                        <div className="d-flex align-items-center justify-content-center h-100 text-muted">
+                                            Pas d'image
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="card-body">
+                                    <p className="product-card-brand">Ref. {product.reference}</p>
+                                    <h5 className="product-card-title">
+                                        {product.name?.[0]?.value}
+                                    </h5>
+                                    <div className="product-card-price">{priceLabel} €</div>
+                                    <div className="product-card-meta">
+                                        <span>Stock: {product.quantity ?? "-"}</span>
+                                        <span>Disponible immediatement</span>
+                                    </div>
+                                    <div className="d-flex align-items-center justify-content-between mt-3">
+                                        <button className="btn btn-primary" onClick={() => handlePreview(product.id)}>
+                                            Voir le produit
+                                        </button>
+                                        <button className="btn btn-outline-secondary" type="button">
+                                            Favoris
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 }

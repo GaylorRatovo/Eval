@@ -11,7 +11,7 @@ function FOUserRow({customer, onClick}) {
         <td>{customer.lastname}</td>
         <td>{customer.email}</td>
         <td>
-            <button type={"button"} onClick={onClick}>
+            <button className="btn btn-sm btn-primary" type={"button"} onClick={onClick}>
                 Se connecter
             </button>
         </td>

@@ -70,25 +70,40 @@ function BOReset() {
     }
 
     return (
-        <div>
-            {[...orderByValue.values()].map((resource) => (
-                <div key={resource.value}>
-                    <input
-                        id={`reset-${resource.value}`}
-                        type="checkbox"
-                        checked={selected.has(resource.value)}
-                        onChange={() => toggleItem(resource.value)}
-                    />
-                    <label
-                        className="form-check-label"
-                        htmlFor={`reset-${resource.value}`}
-                    >
-                        {resource.value} / {resource.description}
-                    </label>
+        <div className="d-flex flex-column gap-4">
+            <div>
+                <h4 className="mb-1">Reset donnees</h4>
+                <p className="text-muted mb-0">Suppression manuelle des ressources de test.</p>
+            </div>
+            <div className="card">
+                <div className="card-body">
+                    <div className="d-flex flex-column gap-2">
+                        {[...orderByValue.values()].map((resource) => (
+                            <div className="form-check" key={resource.value}>
+                                <input
+                                    className="form-check-input"
+                                    id={`reset-${resource.value}`}
+                                    type="checkbox"
+                                    checked={selected.has(resource.value)}
+                                    onChange={() => toggleItem(resource.value)}
+                                />
+                                <label
+                                    className="form-check-label"
+                                    htmlFor={`reset-${resource.value}`}
+                                >
+                                    {resource.value} / {resource.description}
+                                </label>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="d-flex flex-wrap gap-2 mt-3">
+                        <button className="btn btn-outline-secondary" onClick={toggleAll}>
+                            {isAllSelected ? "Deselectionner tout" : "Selectionner tout"}
+                        </button>
+                        <button className="btn btn-danger" onClick={doDelete}>Valider</button>
+                    </div>
                 </div>
-            ))}
-            <button onClick={toggleAll}>{isAllSelected ? "Désélectionner tout" : "Sélectionner tout"}</button>
-            <button onClick={doDelete}>Valider</button>
+            </div>
         </div>
     );
 
