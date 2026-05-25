@@ -136,7 +136,7 @@ export function filterProductsByCategory(products, categoryId) {
  */
 export function filterProductsByName(products, name = "") {
     return products.filter((product) => {
-        const productName = product.name?.[0]?.value || "";
+        const productName = Product.pickLang(product.name);
 
         if (productName.toLowerCase().includes(name.toLowerCase())) {
             return true;

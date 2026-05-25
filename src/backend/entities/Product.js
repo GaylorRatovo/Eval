@@ -138,9 +138,15 @@ class Product {
 	}
 
 	static pickLang(field, langId = 1) {
-		if (!Array.isArray(field)) return ""
-		const match = field.find((l) => l?.id === langId)
-		return match?.value ?? field[0]?.value ?? ""
+		if (!field) return ""
+		if (Array.isArray(field)) {
+			const match = field.find((l) => l?.id === langId)
+			return match?.value ?? field[0]?.value ?? ""
+		}
+		if (typeof field === "object") {
+			return field?.value ?? ""
+		}
+		return String(field)
 	}
 
 	static fromData(data) {

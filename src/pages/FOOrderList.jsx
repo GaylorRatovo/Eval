@@ -267,38 +267,107 @@ function FOOrderList() {
     )
 
     return (
-        <>
-            <h1>Liste de tous les commandes</h1>
+        <div>
+            {/* Breadcrumb */}
+            <nav aria-label="breadcrumb" className="mb-4">
+                <ol className="breadcrumb">
+                    <li className="breadcrumb-item">
+                        <a href="/fo/products" className="text-decoration-none">Produits</a>
+                    </li>
+                    <li className="breadcrumb-item active" aria-current="page">Mes commandes</li>
+                </ol>
+            </nav>
 
-            {isLoading ? (
-                <p>Chargements des clients</p>
-            ) : (
-                <FOOrderRow
-                    title="Commandes"
-                    rows={orders}
-                    edit={edit}
-                    multiplicateur={1}
-                    onChange={handleChange}
-                    onClick={handleClick}
-                    actionMode="order"
-                />
-            )}
+            {/* En-têtes */}
+            <div className="mb-5">
+                <h2 className="fw-bold mb-1">Mes commandes</h2>
+                <p className="text-body-secondary">
+                    Consultez l'historique de vos commandes et réitérez vos achats
+                </p>
+            </div>
 
-            <h2>Mes paniers sans commande</h2>
+            {/* Section Commandes */}
+            <div className="mb-5">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h5 className="fw-bold mb-0">
+                        <i className="bx bx-package me-2"></i>
+                        Commandes passées
+                    </h5>
+                    {!isLoading && orders.length > 0 && (
+                        <span className="badge bg-primary">{orders.length}</span>
+                    )}
+                </div>
 
-            {isLoading ? (
-                <p>Chargements des paniers</p>
-            ) : (
-                <FOOrderRow
-                    title="Paniers"
-                    rows={cartRows}
-                    edit={edit}
-                    onChange={handleChange}
-                    onClick={handleCommanderClick}
-                    actionMode="cart"
-                />
-            )}
-        </>
+                {isLoading ? (
+                    <div className="card border-0 p-4 text-center">
+                        <div className="spinner-border spinner-border-sm mb-2" role="status">
+                            <span className="visually-hidden">Chargement...</span>
+                        </div>
+                        <p className="text-body-secondary mb-0">Chargement de vos commandes...</p>
+                    </div>
+                ) : orders.length > 0 ? (
+                    <FOOrderRow
+                        title="Commandes"
+                        rows={orders}
+                        edit={edit}
+                        multiplicateur={1}
+                        onChange={handleChange}
+                        onClick={handleClick}
+                        actionMode="order"
+                    />
+                ) : (
+                    <div className="card border-0 text-center py-5" style={{ backgroundColor: "#f8f9fa" }}>
+                        <i className="bx bx-inbox" style={{ fontSize: "48px", color: "var(--bs-body-color-rgb)" }}></i>
+                        <h6 className="mt-3 mb-2">Aucune commande trouvée</h6>
+                        <p className="text-body-secondary mb-3">Vous n'avez pas encore passé de commande</p>
+                        <a href="/fo/products" className="btn btn-sm btn-primary">
+                            <i className="bx bx-arrow-back me-2"></i>
+                            Commencer vos achats
+                        </a>
+                    </div>
+                )}
+            </div>
+
+            {/* Divider */}
+            <hr className="my-5" />
+
+            {/* Section Paniers sans commande */}
+            <div className="mb-5">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h5 className="fw-bold mb-0">
+                        <i className="bx bx-shopping-bag me-2"></i>
+                        Paniers en cours
+                    </h5>
+                    {!isLoading && cartRows.length > 0 && (
+                        <span className="badge bg-warning text-dark">{cartRows.length}</span>
+                    )}
+                </div>
+
+                {isLoading ? (
+                    <div className="card border-0 p-4 text-center">
+                        <div className="spinner-border spinner-border-sm mb-2" role="status">
+                            <span className="visually-hidden">Chargement...</span>
+                        </div>
+                        <p className="text-body-secondary mb-0">Chargement de vos paniers...</p>
+                    </div>
+                ) : cartRows.length > 0 ? (
+                    <FOOrderRow
+                        title="Paniers"
+                        rows={cartRows}
+                        edit={edit}
+                        onChange={handleChange}
+                        onClick={handleCommanderClick}
+                        actionMode="cart"
+                    />
+                ) : (
+                    <div className="card border-0 text-center py-5" style={{ backgroundColor: "#f8f9fa" }}>
+                        <i className="bx bx-check-circle" style={{ fontSize: "48px", color: "var(--bs-success)" }}></i>
+                        <h6 className="mt-3 mb-2">Aucun panier en attente</h6>
+                        <p className="text-body-secondary mb-0">Tous vos paniers ont été convertis en commandes</p>
+                    </div>
+                )}
+            </div>
+        </div>
     )
 }
 

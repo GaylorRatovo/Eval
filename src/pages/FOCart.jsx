@@ -527,11 +527,19 @@ function FOCart() {
                         const declinaisons = await product.getDeclinaisons();
                         const values = declinaisons?.values || [];
 
+                        // Extract image URL properly if it's an object
+                        let imageUrl = enrichedRow.imageUrl;
+                        if (typeof imageUrl === 'object' && imageUrl?.url) {
+                            imageUrl = imageUrl.url;
+                        } else if (typeof imageUrl === 'object') {
+                            imageUrl = null; // Skip if still an object
+                        }
+
                         return {
                             productId,
                             productName: enrichedRow.productName,
                             productReference: product.reference,
-                            productImageURL: enrichedRow.imageUrl,
+                            productImageURL: imageUrl,
                             quantity: row?.quantity,
                             baseTtcPrice: await product.getTtcPrice(),
                             taxRate: await product.getTax(),
@@ -566,59 +574,192 @@ function FOCart() {
     }, [user.id]);
 
     if (isLoading) {
-        return <p>chargement du panier...</p>;
+        return (
+            <div className="d-flex justify-content-center align-items-center py-5">
+                <div className="spinner-border" role="status">
+                    <span className="visually-hidden">Chargement du panier...</span>
+                </div>
+            </div>
+        );
     }
 
-    if (!cart) {
-        return <p>pas de panier</p>;
+    if (!cart || rowDetails.length === 0) {
+        return (
+            <div>
+                <nav aria-label="breadcrumb" className="mb-4">
+                    <ol className="breadcrumb">
+                        <li className="breadcrumb-item">
+                            <a href="/fo/products" className="text-decoration-none">Produits</a>
+                        </li>
+                        <li className="breadcrumb-item active" aria-current="page">Panier</li>
+                    </ol>
+                </nav>
+                
+                <div className="text-center py-5">
+                    <i className="bx bx-cart-alt" style={{ fontSize: "64px", color: "var(--bs-body-color-rgb)" }}></i>
+                    <h4 className="mt-3 mb-2">Votre panier est vide</h4>
+                    <p className="text-body-secondary mb-4">Découvrez nos produits et commencez vos achats</p>
+                    <a href="/fo/products" className="btn btn-primary">
+                        <i className="bx bx-arrow-back me-2"></i>
+                        Continuer mes achats
+                    </a>
+                </div>
+            </div>
+        );
     }
 
-    return <>
-        <h1>Panier : {cart.id}</h1>
+    return (
+        <div>
+            {/* Breadcrumb */}
+            <nav aria-label="breadcrumb" className="mb-4">
+                <ol className="breadcrumb">
+                    <li className="breadcrumb-item">
+                        <a href="/fo/products" className="text-decoration-none">Produits</a>
+                    </li>
+                    <li className="breadcrumb-item active" aria-current="page">Panier</li>
+                </ol>
+            </nav>
 
-        {rowDetails.length === 0 ? (
-            <p>panier vide</p>
-        ) : (
-            <>
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Nom</th>
-                        <th>Reference</th>
-                        <th>Image</th>
-                        <th>Declinaison</th>
-                        <th>Stock</th>
-                        <th>Prix TTC</th>
-                        <th>Quantite</th>
-                        <th>Total ligne</th>
-                        <th>Action</th>
-                    </tr>
-                    </thead>
+            {/* En-tête */}
+            <div className="mb-4">
+                <h2 className="fw-bold mb-1">Mon panier</h2>
+                <p className="text-body-secondary">
+                    {rowDetails.length} article{rowDetails.length > 1 ? "s" : ""} dans votre panier
+                </p>
+            </div>
 
-                    <tbody>
-                    {rowDetails.map((row, index) => (
-                        <FOCartRow
-                            key={getRowKey(row, index)}
-                            row={row}
-                            index={index}
-                            onOptionChange={handleOptionChange}
-                            onQuantityChange={handleQuantityChange}
-                            onDelete={handleDeleteRow}
-                            formatPrice={formatPrice}
-                        />
-                    ))}
-                    </tbody>
-                </table>
+            <div className="row g-4">
+                {/* Tableau du panier */}
+                <div className="col-12 col-lg-8">
+                    <div className="card border-0" style={{ boxShadow: "0 2px 12px rgba(67, 89, 113, 0.08)" }}>
+                        <div className="table-responsive">
+                            <table className="table table-hover mb-0">
+                                <thead className="table-light">
+                                    <tr>
+                                        <th>Produit</th>
+                                        <th>Prix unitaire</th>
+                                        <th>Quantité</th>
+                                        <th>Total</th>
+                                        <th style={{ width: "80px" }}>Actions</th>
+                                    </tr>
+                                </thead>
 
-                <p>Total HT : {formatPrice(totals.totalHt)}</p>
-                <p>Total TTC : {formatPrice(totals.totalTtc)}</p>
+                                <tbody>
+                                    {rowDetails.map((row, index) => (
+                                        <FOCartRow
+                                            key={getRowKey(row, index)}
+                                            row={row}
+                                            index={index}
+                                            onOptionChange={handleOptionChange}
+                                            onQuantityChange={handleQuantityChange}
+                                            onDelete={handleDeleteRow}
+                                            formatPrice={formatPrice}
+                                        />
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
-                <button onClick={handleCheckout}>
-                    Commander
-                </button>
-            </>
-        )}
-    </>;
+                    {/* Bouton continuer mes achats */}
+                    <div className="mt-3">
+                        <a href="/fo/products" className="btn btn-outline-secondary btn-sm">
+                            <i className="bx bx-arrow-back me-2"></i>
+                            Continuer mes achats
+                        </a>
+                    </div>
+                </div>
+
+                {/* Résumé du panier (Sticky) */}
+                <div className="col-12 col-lg-4">
+                    <div 
+                        className="card border-0" 
+                        style={{
+                            boxShadow: "0 2px 12px rgba(67, 89, 113, 0.08)",
+                            position: "sticky",
+                            top: "20px"
+                        }}
+                    >
+                        <div className="card-body">
+                            <h6 className="card-title fw-bold mb-3">
+                                <i className="bx bx-receipt me-2"></i>
+                                Résumé
+                            </h6>
+
+                            {/* Détails des totaux */}
+                            <div className="space-y-3">
+                                <div className="d-flex justify-content-between align-items-center pb-3">
+                                    <span className="text-body-secondary">Sous-total</span>
+                                    <span className="fw-bold">{formatPrice(totals.totalHt)} €</span>
+                                </div>
+
+                                <div className="d-flex justify-content-between align-items-center pb-3 border-bottom">
+                                    <span className="text-body-secondary">Estimation des taxes</span>
+                                    <span className="fw-bold">
+                                        {formatPrice(totals.totalTtc - totals.totalHt)} €
+                                    </span>
+                                </div>
+
+                                <div className="d-flex justify-content-between align-items-center pb-3">
+                                    <span className="text-body-secondary">Livraison</span>
+                                    <span className="badge bg-label-success">Gratuite</span>
+                                </div>
+
+                                <div className="d-flex justify-content-between align-items-center py-3 border-top border-bottom">
+                                    <strong>Total TTC</strong>
+                                    <h5 className="text-primary fw-bold mb-0">
+                                        {formatPrice(totals.totalTtc)} €
+                                    </h5>
+                                </div>
+                            </div>
+
+                            {/* Bouton de paiement */}
+                            <button 
+                                className="btn btn-primary w-100 mt-3"
+                                onClick={handleCheckout}
+                            >
+                                <i className="bx bx-right-arrow-alt me-2"></i>
+                                Procéder au paiement
+                            </button>
+
+                            {/* Info supplémentaires */}
+                            <div className="mt-3 pt-3 border-top">
+                                <p className="small text-body-secondary mb-2">
+                                    <i className="bx bx-check-circle text-success me-2"></i>
+                                    Paiement sécurisé
+                                </p>
+                                <p className="small text-body-secondary mb-0">
+                                    <i className="bx bx-lock-alt text-info me-2"></i>
+                                    Données cryptées
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Codes de réduction */}
+                    <div className="card border-0 mt-3" style={{ boxShadow: "0 2px 12px rgba(67, 89, 113, 0.08)" }}>
+                        <div className="card-body">
+                            <h6 className="card-title fw-bold mb-3">
+                                <i className="bx bx-tag me-2"></i>
+                                Code promo
+                            </h6>
+                            <div className="input-group input-group-sm">
+                                <input 
+                                    type="text" 
+                                    className="form-control" 
+                                    placeholder="Entrez votre code..."
+                                    disabled
+                                />
+                                <button className="btn btn-outline-secondary" type="button" disabled>
+                                    <i className="bx bx-check"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export default FOCart;

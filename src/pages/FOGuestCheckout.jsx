@@ -338,69 +338,324 @@ function FOGuestCheckout() {
     };
 
     if (isLoading) {
-        return <p>Chargement...</p>;
+        return (
+            <div className="d-flex justify-content-center align-items-center py-5">
+                <div className="spinner-border" role="status">
+                    <span className="visually-hidden">Chargement...</span>
+                </div>
+            </div>
+        );
     }
 
     if (!cart) {
-        return <p>Pas de panier</p>;
+        return (
+            <div className="alert alert-danger" role="alert">
+                <i className="bx bx-error-circle me-2"></i>
+                Aucun panier trouvé. Veuillez ajouter des produits à votre panier.
+            </div>
+        );
     }
 
     return (
         <div>
-            <h1>Finaliser la commande</h1>
+            {/* Breadcrumb */}
+            <nav aria-label="breadcrumb" className="mb-4">
+                <ol className="breadcrumb">
+                    <li className="breadcrumb-item">
+                        <a href="/fo/products" className="text-decoration-none">Produits</a>
+                    </li>
+                    <li className="breadcrumb-item">
+                        <a href="/fo/cart" className="text-decoration-none">Panier</a>
+                    </li>
+                    <li className="breadcrumb-item active" aria-current="page">Finaliser la commande</li>
+                </ol>
+            </nav>
 
-            {error ? <p>{error}</p> : null}
-
-            <div>
-                <button type="button" onClick={() => setMode("login")}>Se connecter</button>
-                <button type="button" onClick={() => setMode("register")}>Inserer les infos</button>
+            {/* En-tête */}
+            <div className="mb-4">
+                <h2 className="fw-bold mb-1">Finaliser votre commande</h2>
+                <p className="text-body-secondary">
+                    Sélectionnez ou créez votre compte pour continuer
+                </p>
             </div>
 
-            {mode === "login" ? (
-                <div>
-                    <h2>Choisir un client</h2>
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Firstname</th>
-                            <th>Lastname</th>
-                            <th>Email</th>
-                            <th>Action</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {customers.map((customer) => (
-                            <FOUserRow
-                                key={customer.id}
-                                customer={customer}
-                                onClick={() => handleLoginCustomer(customer)}
-                            />
-                        ))}
-                        </tbody>
-                    </table>
+            {/* Message d'erreur */}
+            {error && (
+                <div className="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i className="bx bx-error-circle me-2"></i>
+                    {error}
+                    <button type="button" className="btn-close" onClick={() => setError("")}></button>
                 </div>
-            ) : (
-                <form onSubmit={handleFormSubmit}>
-                    <h2>Informations client</h2>
-                    <input type="text" placeholder="Firstname" value={form.firstname} onChange={handleFormChange("firstname")} />
-                    <input type="text" placeholder="Lastname" value={form.lastname} onChange={handleFormChange("lastname")} />
-                    <input type="email" placeholder="Email" value={form.email} onChange={handleFormChange("email")} />
-                    <input type="text" placeholder="Password" value={form.password} onChange={handleFormChange("password")} />
-                    <input type="text" placeholder="Adresse" value={form.address1} onChange={handleFormChange("address1")} />
-                    <input type="text" placeholder="Code postal" value={form.postcode} onChange={handleFormChange("postcode")} />
-                    <input type="text" placeholder="Ville" value={form.city} onChange={handleFormChange("city")} />
-                    <button type="submit" disabled={isSubmitting}>Creer compte</button>
-                </form>
             )}
 
-            {!isGuest ? (
-                <div>
-                    <button type="button" onClick={handleConfirmOrder}>
-                        Effectuer la commande
-                    </button>
+            {/* Toggles Mode */}
+            <div className="btn-group mb-4" role="group">
+                <button 
+                    type="button"
+                    className={`btn ${mode === "login" ? "btn-primary" : "btn-outline-primary"}`}
+                    onClick={() => setMode("login")}
+                >
+                    <i className="bx bx-log-in me-2"></i>
+                    Se connecter
+                </button>
+                <button 
+                    type="button"
+                    className={`btn ${mode === "register" ? "btn-primary" : "btn-outline-primary"}`}
+                    onClick={() => setMode("register")}
+                >
+                    <i className="bx bx-user-plus me-2"></i>
+                    Créer un compte
+                </button>
+            </div>
+
+            <div className="row g-4">
+                {/* Contenu principal */}
+                <div className="col-12 col-lg-8">
+                    {mode === "login" ? (
+                        <div className="card border-0" style={{ boxShadow: "0 2px 12px rgba(67, 89, 113, 0.08)" }}>
+                            <div className="card-body p-4">
+                                <h5 className="card-title fw-bold mb-4">
+                                    <i className="bx bx-user me-2"></i>
+                                    Sélectionner un client existant
+                                </h5>
+
+                                {customers.length > 0 ? (
+                                    <div className="table-responsive">
+                                        <table className="table table-hover mb-0">
+                                            <thead className="table-light">
+                                                <tr>
+                                                    <th>Nom</th>
+                                                    <th>Email</th>
+                                                    <th style={{ width: "100px" }}>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {customers.map((customer) => (
+                                                    <tr key={customer.id}>
+                                                        <td className="fw-bold">
+                                                            {customer.firstname} {customer.lastname}
+                                                        </td>
+                                                        <td>{customer.email}</td>
+                                                        <td>
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-sm btn-primary"
+                                                                onClick={() => handleLoginCustomer(customer)}
+                                                                disabled={isSubmitting}
+                                                            >
+                                                                <i className="bx bx-check me-1"></i>
+                                                                Choisir
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="alert alert-info mb-0">
+                                        <i className="bx bx-info-circle me-2"></i>
+                                        Aucun client disponible. Créez un nouveau compte ci-contre.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="card border-0" style={{ boxShadow: "0 2px 12px rgba(67, 89, 113, 0.08)" }}>
+                            <div className="card-body p-4">
+                                <h5 className="card-title fw-bold mb-4">
+                                    <i className="bx bx-user-plus me-2"></i>
+                                    Créer un nouveau compte
+                                </h5>
+
+                                <form onSubmit={handleFormSubmit}>
+                                    <div className="row g-3">
+                                        {/* Informations personnelles */}
+                                        <div className="col-12">
+                                            <h6 className="fw-bold text-body-secondary mb-3">Informations personnelles</h6>
+                                        </div>
+
+                                        <div className="col-12 col-sm-6">
+                                            <label htmlFor="firstname" className="form-label">Prénom</label>
+                                            <input 
+                                                id="firstname"
+                                                type="text" 
+                                                className="form-control" 
+                                                placeholder="Jean" 
+                                                value={form.firstname} 
+                                                onChange={handleFormChange("firstname")}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="col-12 col-sm-6">
+                                            <label htmlFor="lastname" className="form-label">Nom</label>
+                                            <input 
+                                                id="lastname"
+                                                type="text" 
+                                                className="form-control" 
+                                                placeholder="Dupont" 
+                                                value={form.lastname} 
+                                                onChange={handleFormChange("lastname")}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="col-12">
+                                            <label htmlFor="email" className="form-label">Email</label>
+                                            <input 
+                                                id="email"
+                                                type="email" 
+                                                className="form-control" 
+                                                placeholder="jean@example.com" 
+                                                value={form.email} 
+                                                onChange={handleFormChange("email")}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="col-12">
+                                            <label htmlFor="password" className="form-label">Mot de passe</label>
+                                            <input 
+                                                id="password"
+                                                type="password" 
+                                                className="form-control" 
+                                                placeholder="••••••••" 
+                                                value={form.password} 
+                                                onChange={handleFormChange("password")}
+                                                required
+                                            />
+                                        </div>
+
+                                        {/* Adresse */}
+                                        <div className="col-12">
+                                            <h6 className="fw-bold text-body-secondary mb-3 mt-2">Adresse de livraison</h6>
+                                        </div>
+
+                                        <div className="col-12">
+                                            <label htmlFor="address1" className="form-label">Adresse</label>
+                                            <input 
+                                                id="address1"
+                                                type="text" 
+                                                className="form-control" 
+                                                placeholder="15 Rue du Commerce" 
+                                                value={form.address1} 
+                                                onChange={handleFormChange("address1")}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="col-12 col-sm-6">
+                                            <label htmlFor="postcode" className="form-label">Code postal</label>
+                                            <input 
+                                                id="postcode"
+                                                type="text" 
+                                                className="form-control" 
+                                                placeholder="75001" 
+                                                value={form.postcode} 
+                                                onChange={handleFormChange("postcode")}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="col-12 col-sm-6">
+                                            <label htmlFor="city" className="form-label">Ville</label>
+                                            <input 
+                                                id="city"
+                                                type="text" 
+                                                className="form-control" 
+                                                placeholder="Paris" 
+                                                value={form.city} 
+                                                onChange={handleFormChange("city")}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="col-12">
+                                            <button 
+                                                type="submit" 
+                                                className="btn btn-primary w-100"
+                                                disabled={isSubmitting}
+                                            >
+                                                {isSubmitting ? (
+                                                    <>
+                                                        <span className="spinner-border spinner-border-sm me-2"></span>
+                                                        Création en cours...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <i className="bx bx-user-plus me-2"></i>
+                                                        Créer mon compte
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            ) : null}
+
+                {/* Récapitulatif du panier */}
+                <div className="col-12 col-lg-4">
+                    <div 
+                        className="card border-0 position-sticky" 
+                        style={{
+                            boxShadow: "0 2px 12px rgba(67, 89, 113, 0.08)",
+                            top: "20px"
+                        }}
+                    >
+                        <div className="card-body">
+                            <h6 className="card-title fw-bold mb-3">
+                                <i className="bx bx-receipt me-2"></i>
+                                Récapitulatif de la commande
+                            </h6>
+
+                            <div className="mb-3">
+                                <p className="text-body-secondary small mb-1">
+                                    Panier ID: <span className="fw-bold">{cart.id}</span>
+                                </p>
+                                <p className="text-body-secondary small mb-0">
+                                    Articles: <span className="fw-bold">{cart.cartRows?.length || 0}</span>
+                                </p>
+                            </div>
+
+                            <div className="d-flex justify-content-between align-items-center py-3 border-top border-bottom mb-3">
+                                <strong>Total TTC</strong>
+                                <h5 className="text-primary fw-bold mb-0">
+                                    À calculer
+                                </h5>
+                            </div>
+
+                            {!isGuest && (
+                                <button 
+                                    type="button"
+                                    className="btn btn-success w-100 mb-2"
+                                    onClick={handleConfirmOrder}
+                                >
+                                    <i className="bx bx-check-circle me-2"></i>
+                                    Confirmer la commande
+                                </button>
+                            )}
+
+                            <button 
+                                type="button"
+                                className="btn btn-outline-secondary w-100"
+                                onClick={() => window.history.back()}
+                            >
+                                <i className="bx bx-arrow-back me-2"></i>
+                                Retour au panier
+                            </button>
+
+                            <p className="text-body-secondary small text-center mt-3 mb-0">
+                                <i className="bx bx-lock-alt text-success me-1"></i>
+                                Paiement sécurisé
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

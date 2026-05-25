@@ -3,7 +3,7 @@ import Customer from "../backend/entities/Customer.js";
 import FOUserRow from "../components/FOUserRow.jsx";
 import useLocalStorage from "../hooks/useLocalStorage.jsx";
 import CustomerService from "../backend/services/CustomerService.js";
-import {useNavigate} from "react-router-dom";
+import {Link ,useNavigate} from "react-router-dom";
 
 /**
  * Page FrontOffice de sélection et connexion d'un client.
@@ -141,35 +141,153 @@ function FOUserList() {
         navigate('/fo/products')
     }
 
-    return <>
-        <h1>Se connecter avec un client</h1>
-        <button type={"button"} onClick={() => connectGuest()}>
-            Connexion anonyme
-        </button>
-        {isLoading ? (<p>Chargements des clients</p>) : (
-            <table>
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Firstname</th>
-                    <th>Lastname</th>
-                    <th>Email</th>
-                    <th>Action</th>
-                </tr>
-                </thead>
-                <tbody>
-                {
-                    customers.map(customer =>
-                        <FOUserRow
-                            key={customer.id}
-                            customer={customer}
-                            onClick={() => connectCustomer(customer)}
-                        />)
-                }
-                </tbody>
-            </table>)
-        }
-    </>
+    return (
+        <div className="min-vh-100 d-flex align-items-center py-4" style={{ backgroundColor: "#f8f9fa" }}>
+            <div className="container">
+                <div className="row justify-content-center">
+                    {/* Colonne gauche - Présentation */}
+                    <div className="col-12 col-md-5 d-flex flex-column justify-content-center mb-4 mb-md-0">
+                        <div className="mb-4">
+                            <div className="d-flex align-items-center gap-3 mb-3">
+                                <i className="bx bxs-shopping-bags" style={{ fontSize: "48px", color: "var(--bs-primary)" }}></i>
+                                <h1 className="fw-bold mb-0">EvalShop</h1>
+                            </div>
+                            <p className="text-body-secondary h6 mb-0">
+                                Votre destination préférée pour les meilleurs achats en ligne
+                            </p>
+                        </div>
+
+                        <div className="mt-5">
+                            <div className="d-flex align-items-start gap-3 mb-4">
+                                <i className="bx bx-check-circle text-success fs-5 mt-1 flex-shrink-0"></i>
+                                <div>
+                                    <h6 className="fw-bold mb-1">Livraison rapide</h6>
+                                    <p className="text-body-secondary small mb-0">Livraison en 2-3 jours ouvrés</p>
+                                </div>
+                            </div>
+
+                            <div className="d-flex align-items-start gap-3 mb-4">
+                                <i className="bx bx-shield text-primary fs-5 mt-1 flex-shrink-0"></i>
+                                <div>
+                                    <h6 className="fw-bold mb-1">Paiement sécurisé</h6>
+                                    <p className="text-body-secondary small mb-0">Transactions 100% sécurisées</p>
+                                </div>
+                            </div>
+
+                            <div className="d-flex align-items-start gap-3">
+                                <i className="bx bx-smile text-warning fs-5 mt-1 flex-shrink-0"></i>
+                                <div>
+                                    <h6 className="fw-bold mb-1">Satisfait ou remboursé</h6>
+                                    <p className="text-body-secondary small mb-0">30 jours pour changer d'avis</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Colonne droite - Formulaire de connexion */}
+                    <div className="col-12 col-md-5">
+                        <div className="card border-0" style={{ boxShadow: "0 2px 12px rgba(67, 89, 113, 0.08)" }}>
+                            <div className="card-body p-4 p-md-5">
+                                <h3 className="card-title fw-bold mb-1">Connectez-vous</h3>
+                                <p className="text-body-secondary mb-4">Accédez à votre compte ou continuez en tant qu'invité</p>
+
+                                {/* Bouton Connexion Anonyme */}
+                                <button 
+                                    type="button"
+                                    className="btn btn-outline-primary w-100 mb-3"
+                                    onClick={() => connectGuest()}
+                                >
+                                    <i className="bx bx-user-check me-2"></i>
+                                    Continuer en tant qu'invité
+                                </button>
+
+                                <Link to="/" className="btn btn-outline-secondary w-100 mb-4">
+                                    <i className="bx bx-log-in me-2"></i>
+                                    Aller au backOffice
+                                </Link>
+
+                                {/* Divider */}
+                                <div className="d-flex align-items-center my-4">
+                                    <div className="flex-grow-1 border-top"></div>
+                                    <div className="px-2 text-body-secondary small">OU</div>
+                                    <div className="flex-grow-1 border-top"></div>
+                                </div>
+
+                                {/* Liste des clients */}
+                                {isLoading ? (
+                                    <div className="text-center py-4">
+                                        <div className="spinner-border spinner-border-sm mb-2" role="status">
+                                            <span className="visually-hidden">Chargement...</span>
+                                        </div>
+                                        <p className="text-body-secondary small mb-0">Chargement des clients...</p>
+                                    </div>
+                                ) : customers.length > 0 ? (
+                                    <div>
+                                        <label className="form-label fw-bold small mb-2">Sélectionner un client</label>
+                                        <div className="d-flex flex-column gap-2">
+                                            {customers.map((customer) => (
+                                                <button
+                                                    key={customer.id}
+                                                    type="button"
+                                                    className="btn btn-light text-start border"
+                                                    onClick={() => connectCustomer(customer)}
+                                                    style={{
+                                                        padding: "12px 16px",
+                                                        transition: "all 0.2s ease"
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.borderColor = "var(--bs-primary)";
+                                                        e.currentTarget.style.backgroundColor = "#f0f4ff";
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.borderColor = "#e0e0e0";
+                                                        e.currentTarget.style.backgroundColor = "white";
+                                                    }}
+                                                >
+                                                    <div className="d-flex justify-content-between align-items-center w-100">
+                                                        <div>
+                                                            <h6 className="mb-1 fw-bold">
+                                                                {customer.firstname || "Client"} {customer.lastname || ""}
+                                                            </h6>
+                                                            <p className="mb-0 text-body-secondary small">
+                                                                {customer.email}
+                                                            </p>
+                                                        </div>
+                                                        <i className="bx bx-right-arrow-alt text-primary"></i>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="alert alert-info mb-0">
+                                        <i className="bx bx-info-circle me-2"></i>
+                                        <small>Aucun client disponible</small>
+                                    </div>
+                                )}
+
+                                {/* Lien supplémentaire */}
+                                <p className="text-center text-body-secondary small mt-4 mb-0">
+                                    Première visite ? 
+                                    <a href="#" className="text-decoration-none ms-2">
+                                        Créer un compte
+                                    </a>
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Informations de sécurité */}
+                        <div className="text-center mt-4">
+                            <p className="text-body-secondary small mb-0">
+                                <i className="bx bx-lock-alt me-1"></i>
+                                Vos données sont sécurisées et cryptées
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export default FOUserList;

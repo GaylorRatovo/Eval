@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import Product from "../backend/entities/Product.js";
 import Category from "../backend/entities/Category.js";
@@ -33,7 +33,7 @@ import { filterProducts } from "../backend/services/ProductService.js";
 function FOProductList() {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
     const [imageUrls, setImageUrls] = useState({});
     const [badges, setBadges] = useState({});
 
@@ -44,6 +44,16 @@ function FOProductList() {
     const [name, setName] = useState("");
 
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Lire la query de recherche depuis l'URL
+    const queryFromUrl = new URLSearchParams(location.search).get("q") || "";
+    const normalizedQuery = queryFromUrl.trim().toLowerCase();
+
+    // Synchroniser l'état du filtre name avec la query URL
+    useEffect(() => {
+        setName(queryFromUrl);
+    }, [queryFromUrl]);
 
     /**
      * Navigue vers la page d'aperçu produit.
@@ -117,7 +127,7 @@ function FOProductList() {
                         item.quantity = quantity;
                         item.badge = badge;
                         item.priceTtc = priceTtc;
-                        item.categoryName = category?.name ?? "";
+                        item.categoryName = Product.pickLang(category?.name) || "";
 
                         nextImageUrls[item.id] = images[0] || "";
                         nextBadges[item.id] = badge;
@@ -195,78 +205,212 @@ function FOProductList() {
     }, [products, minPrice, maxPrice, categoryId, name]);
 
     const selectableCategories = useMemo(() => {
-        return categories.filter((category) => String(category?.name ?? "").trim() !== "");
+        return categories.filter((category) => String(Product.pickLang(category?.name) ?? "").trim() !== "");
     }, [categories]);
 
     return (
         <div>
-            <h1>Product List</h1>
-
-            <div>
-                <label>Name : </label>
-                <input placeholder="Search name" value={name} onChange={(e) => setName(e.target.value)} />
-                <label>Min price : </label>
-                <input placeholder="Min price" type="number" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} min={0} />
-                <label>Max price : </label>
-                <input placeholder="Max price" type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} min={0} />
-                <label>Category : </label>
-                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                    <option value="">All Categories</option>
-                    {selectableCategories.map((category, index) => (
-                        <option key={`${category.id}-${index}`} value={category.id}>
-                            {category.name}
-                        </option>
-                    ))}
-                </select>
+            {/* En-tête de la page */}
+            <div className="mb-4">
+                <h2 className="fw-bold mb-1">Découvrez nos produits</h2>
+                <p className="text-body-secondary">
+                    {normalizedQuery
+                        ? `Résultats pour "${queryFromUrl}" (${filteredProducts.length})`
+                        : `${filteredProducts.length} produits disponibles`}
+                </p>
             </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Image</th>
-                        <th>Name</th>
-                        <th>Reference</th>
-                        <th>Price</th>
-                        <th>Category</th>
-                        <th>Stock total</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
+            {/* Barre de filtres horizontale */}
+            <div className="card mb-4" style={{ border: "none", boxShadow: "0 2px 4px rgba(67, 89, 113, 0.08)" }}>
+                <div className="card-body p-3">
+                    <div className="row g-3 align-items-end">
+                        <div className="col-12 col-md-3">
+                            <label htmlFor="filterName" className="form-label fw-bold small mb-2">
+                                <i className="bx bx-search me-2"></i>Nom du produit
+                            </label>
+                            <input
+                                id="filterName"
+                                type="text"
+                                className="form-control form-control-sm"
+                                placeholder="Rechercher..."
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                            />
+                        </div>
 
-                <tbody>
+                        <div className="col-12 col-md-2">
+                            <label htmlFor="filterMinPrice" className="form-label fw-bold small mb-2">
+                                <i className="bx bx-euro me-2"></i>Prix min
+                            </label>
+                            <input
+                                id="filterMinPrice"
+                                type="number"
+                                className="form-control form-control-sm"
+                                placeholder="0"
+                                value={minPrice}
+                                onChange={(e) => setMinPrice(e.target.value)}
+                                min="0"
+                            />
+                        </div>
+
+                        <div className="col-12 col-md-2">
+                            <label htmlFor="filterMaxPrice" className="form-label fw-bold small mb-2">
+                                <i className="bx bx-euro me-2"></i>Prix max
+                            </label>
+                            <input
+                                id="filterMaxPrice"
+                                type="number"
+                                className="form-control form-control-sm"
+                                placeholder="0"
+                                value={maxPrice}
+                                onChange={(e) => setMaxPrice(e.target.value)}
+                                min="0"
+                            />
+                        </div>
+
+                        <div className="col-12 col-md-3">
+                            <label htmlFor="filterCategory" className="form-label fw-bold small mb-2">
+                                <i className="bx bx-category me-2"></i>Catégorie
+                            </label>
+                            <select
+                                id="filterCategory"
+                                className="form-select form-select-sm"
+                                value={categoryId}
+                                onChange={(e) => setCategoryId(e.target.value)}
+                            >
+                                <option value="">Toutes les catégories</option>
+                                {selectableCategories.map((category, index) => (
+                                    <option key={`${category.id}-${index}`} value={category.id}>
+                                        {Product.pickLang(category.name)}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="col-12 col-md-2">
+                            <button
+                                className="btn btn-sm btn-outline-secondary w-100"
+                                onClick={() => {
+                                    setName("");
+                                    setMinPrice(0);
+                                    setMaxPrice(0);
+                                    setCategoryId("");
+                                }}
+                            >
+                                <i className="bx bx-reset me-2"></i>Réinitialiser
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Grille de cartes produits */}
+            {isLoading ? (
+                <div className="d-flex justify-content-center align-items-center py-5">
+                    <div className="spinner-border" role="status">
+                        <span className="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            ) : filteredProducts.length > 0 ? (
+                <div className="row g-4">
                     {filteredProducts.map((product, index) => (
-                        <tr key={`${product.id}-${index}`}>
-                            <td>
-                                {imageUrls[product.id] ? (
-                                    <img src={imageUrls[product.id]} alt="product" width="80" />
-                                ) : (
-                                    "no image"
-                                )}
-                            </td>
+                        <div key={`${product.id}-${index}`} className="col-12 col-sm-6 col-lg-4 col-xl-3">
+                            <div
+                                className="product-card h-100 d-flex flex-column"
+                                style={{ cursor: "pointer" }}
+                                onClick={() => handlePreview(product.id)}
+                            >
+                                {/* Image du produit */}
+                                <div className="product-card-media position-relative">
+                                    {imageUrls[product.id] ? (
+                                        <img src={imageUrls[product.id]} alt={Product.pickLang(product.name) || "Product"} />
+                                    ) : (
+                                        <div className="d-flex align-items-center justify-content-center h-100 bg-light">
+                                            <i className="bx bx-image fs-1 text-body-secondary"></i>
+                                        </div>
+                                    )}
 
-                            <td>
-                                {product.name?.[0]?.value}
-                                {badges[product.id] ? (
-                                    <span style={{ color: badges[product.id].color }}>
-                                        {` (${badges[product.id].label})`}
-                                    </span>
-                                ) : null}
-                            </td>
+                                    {/* Badge produit */}
+                                    {badges[product.id] && (
+                                        <span
+                                            className={`product-badge ${
+                                                badges[product.id].label === "HOT"
+                                                    ? "product-badge-hot"
+                                                    : "product-badge-new"
+                                            }`}
+                                        >
+                                            <i className="bx product-badge-icon"></i>
+                                            {badges[product.id].label}
+                                        </span>
+                                    )}
 
-                            <td>{product.reference}</td>
-                            <td>{Number(product.priceTtc ?? product.price).toFixed(2)}</td>
-                            <td>{product.categoryName || "-"}</td>
-                            <td>{product.quantity}</td>
+                                    {/* Badge stock */}
+                                    {product.quantity <= 0 && (
+                                        <span
+                                            className="product-badge"
+                                            style={{
+                                                background: "rgba(255, 62, 29, 0.14)",
+                                                color: "#ff4d49",
+                                                border: "1px solid rgba(255, 77, 73, 0.25)",
+                                            }}
+                                        >
+                                            Rupture
+                                        </span>
+                                    )}
+                                </div>
 
-                            <td>
-                                <button onClick={() => handlePreview(product.id)}>
-                                    Aperçu
-                                </button>
-                            </td>
-                        </tr>
+                                {/* Corps de la carte */}
+                                <div className="card-body flex-grow-1 d-flex flex-column p-3">
+                                    {/* Référence produit */}
+                                    <p className="product-card-brand">
+                                        REF: {product.reference || "-"}
+                                    </p>
+
+                                    {/* Nom du produit */}
+                                    <h6 className="product-card-title">
+                                        {Product.pickLang(product.name) || "Sans titre"}
+                                    </h6>
+
+                                    {/* Catégorie */}
+                                    <p className="small text-body-secondary mb-2">
+                                        {product.categoryName || "Uncategorized"}
+                                    </p>
+
+                                    {/* Espaceur pour pousser le prix vers le bas */}
+                                    <div className="flex-grow-1"></div>
+
+                                    {/* Stock info */}
+                                    <p className="small text-body-secondary mb-2">
+                                        <i className="bx bx-package me-1"></i>
+                                        Stock: <strong>{product.quantity || 0}</strong>
+                                    </p>
+
+                                    {/* Prix */}
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <span className="product-card-price">
+                                            {Number(product.priceTtc ?? product.price).toFixed(2)} €
+                                        </span>
+                                        <button
+                                            className="btn btn-sm btn-primary"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handlePreview(product.id);
+                                            }}
+                                        >
+                                            <i className="bx bx-eye me-1"></i>Voir
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     ))}
-                </tbody>
-            </table>
+                </div>
+            ) : (
+                <div className="alert alert-info" role="alert">
+                    <i className="bx bx-info-circle me-2"></i>
+                    Aucun produit ne correspond à vos critères de recherche.
+                </div>
+            )}
         </div>
     );
 }
