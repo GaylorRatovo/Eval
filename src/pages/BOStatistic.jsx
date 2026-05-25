@@ -123,6 +123,30 @@ function BOStatistic() {
         benefice: acc.benefice + Number(row?.benefice ?? 0),
     }), {quantity: 0, totalVente: 0, totalAchat: 0, benefice: 0}), [orderCategoryMetrics])
 
+     const kpiVentesCommandes = useMemo(() => {
+        return orderCategoryMetrics.reduce((total, row) => total + Number(row?.totalVente ?? 0), 0)
+    }, [orderCategoryMetrics])
+
+    const kpiAchatsCommandes = useMemo(() => {
+        return orderCategoryMetrics.reduce((total, row) => total + Number(row?.totalAchat ?? 0), 0)
+    }, [orderCategoryMetrics])
+
+    const kpiVentesStock = useMemo(() => {
+        return orderCategoryMetricsFromStock.reduce((total, row) => total + Number(row?.totalVente ?? 0), 0)
+    }, [orderCategoryMetricsFromStock])
+
+    const kpiAchatsStock = useMemo(() => {
+        return orderCategoryMetricsFromStock.reduce((total, row) => total + Number(row?.totalAchat ?? 0), 0)
+    }, [orderCategoryMetricsFromStock])
+
+    const kpiBeneficeTableau1 = useMemo(() => {
+        return orderCategoryMetrics.reduce((total, row) => total + Number(row?.benefice ?? 0), 0)
+    }, [orderCategoryMetrics])
+
+    const kpiBeneficeTableau2 = useMemo(() => {
+        return orderCategoryMetricsFromStock.reduce((total, row) => total + Number(row?.benefice ?? 0), 0)
+    }, [orderCategoryMetricsFromStock])
+
     const columns = useMemo(() => [
         {
             header: "Categorie",
@@ -132,7 +156,7 @@ function BOStatistic() {
         {
             header: "Qte",
             accessorFn: (row) => Number(row?.quantity ?? 0),
-            Cell: ({cell}) => formatNumber(cell.getValue()),
+            Cell: ({cell}) => toInt(cell.getValue()),
             Footer: () => <strong>{formatNumber(orderCategoryTotals.quantity)}</strong>,
         },
         {
@@ -167,7 +191,7 @@ function BOStatistic() {
         {
             header: "Qte",
             accessorFn: (row) => Number(row?.orderDetail?.productQuantity),
-            Cell: ({cell}) => formatNumber(cell.getValue()),
+            Cell: ({cell}) => toInt(cell.getValue()),
         },
         {
             header: "Vente total",
@@ -207,7 +231,7 @@ function BOStatistic() {
         {
             header: "Qte",
             accessorFn: (row) => Number(row?.quantity ?? 0),
-            Cell: ({cell}) => formatNumber(cell.getValue()),
+            Cell: ({cell}) => toInt(cell.getValue()),
             Footer: () => <strong>{formatNumber(orderCategoryFromStockTotal.quantity)}</strong>,
         },
         {
@@ -284,46 +308,151 @@ function BOStatistic() {
 
     return (
         <div>
-            <h1>Statistiques</h1>
+            {/* En-tete */}
+            <div className="d-flex flex-wrap justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 className="fw-bold mb-1">Statistiques</h1>
+                    <p className="text-body-secondary mb-0">Analyse des ventes et des stocks</p>
+                </div>
+            </div>
 
-            {loading && <p>Chargement...</p>}
-            {!loading && error && <p>{error}</p>}
+            {loading && (
+                <div className="d-flex justify-content-center align-items-center py-5">
+                    <div className="spinner-border" role="status">
+                        <span className="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+            )}
+
+            {!loading && error && (
+                <div className="alert alert-danger" role="alert">
+                    <i className="bx bx-error-circle me-2"></i>
+                    {error}
+                </div>
+            )}
 
             {!loading && !error && (
-                <div>
-                    <div>
-                        <div>
-                            date min
-                            <input
-                                type="date"
-                                value={dateMin}
-                                onChange={(event) => setDateMin(event.target.value)}
-                            />
-                        </div>
+                <div className="row g-4">
+                    {/* Filtres de date */}
+                    <div className="col-12">
+                        <div className="card border-0 shadow-sm">
+                            <div className="card-body">
+                                <div className="row g-3 align-items-end">
+                                    <div className="col-12 col-md-4">
+                                        <label className="form-label fw-bold small">Date min</label>
+                                        <input
+                                            type="date"
+                                            className="form-control"
+                                            value={dateMin}
+                                            onChange={(event) => setDateMin(event.target.value)}
+                                        />
+                                    </div>
 
-                        <div>
-                            date max
-                            <input
-                                type="date"
-                                value={dateMax}
-                                onChange={(event) => setDateMax(event.target.value)}
-                            />
-                        </div>
+                                    <div className="col-12 col-md-4">
+                                        <label className="form-label fw-bold small">Date max</label>
+                                        <input
+                                            type="date"
+                                            className="form-control"
+                                            value={dateMax}
+                                            onChange={(event) => setDateMax(event.target.value)}
+                                        />
+                                    </div>
 
-                        <button onClick={resetDateFilter}>
-                            Reset filtre date
-                        </button>
+                                    <div className="col-12 col-md-4">
+                                        <button className="btn btn-outline-secondary w-100" onClick={resetDateFilter}>
+                                            <i className="bx bx-reset me-2"></i>
+                                            Reset filtre date
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <MaterialReactTable table={table}/>
 
-                    <h3>Commande par categorie (cout depuis mouvements)</h3>
-                    <MaterialReactTable table={stockCostTable}/>
+                    {/* KPI globaux */}
+                    <div className="col-12">
+                        <div className="row g-3">
+                            {/* KPI ventes commandes */}
+                            <div className="col-12 col-md-4">
+                                <div className="card border-0 shadow-sm">
+                                    <div className="card-body">
+                                        <p className="text-body-secondary mb-1">Ventes (Commandes)</p>
+                                        <h4 className="fw-bold mb-0">{formatNumber(kpiVentesCommandes)}</h4>
+                                    </div>
+                                </div>
+                            </div>
 
-                    {/* <h3>Test</h3>
-                    <MaterialReactTable table={stockCostTableTest} /> */}
+                            {/* KPI achats commandes */}
+                            <div className="col-12 col-md-4">
+                                <div className="card border-0 shadow-sm">
+                                    <div className="card-body">
+                                        <p className="text-body-secondary mb-1">Achats (Commandes)</p>
+                                        <h4 className="fw-bold mb-0">{formatNumber(kpiAchatsCommandes)}</h4>
+                                    </div>
+                                </div>
+                            </div>
 
-                    <h3>Disponibilite Stock</h3>
-                    <MaterialReactTable table={stockTable}/>
+                            {/* KPI achats stock */}
+                            <div className="col-12 col-md-4">
+                                <div className="card border-0 shadow-sm">
+                                    <div className="card-body">
+                                        <p className="text-body-secondary mb-1">Achats (Stock)</p>
+                                        <h4 className="fw-bold mb-0">{formatNumber(kpiAchatsStock)}</h4>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* KPI benefice commandes */}
+                            <div className="col-12 col-md-6">
+                                <div className="card border-0 shadow-sm">
+                                    <div className="card-body">
+                                        <p className="text-body-secondary mb-1">Benefice (Commandes)</p>
+                                        <h4 className="fw-bold mb-0">{formatNumber(kpiBeneficeTableau1)}</h4>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* KPI benefice stock */}
+                            <div className="col-12 col-md-6">
+                                <div className="card border-0 shadow-sm">
+                                    <div className="card-body">
+                                        <p className="text-body-secondary mb-1">Benefice (Stock)</p>
+                                        <h4 className="fw-bold mb-0">{formatNumber(kpiBeneficeTableau2)}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Tableau ventes par categorie */}
+                    <div className="col-12">
+                        <div className="card border-0 shadow-sm">
+                            <div className="card-body">
+                                <h5 className="fw-bold mb-3">Commandes par categorie</h5>
+                                <MaterialReactTable table={table} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Tableau couts stock */}
+                    <div className="col-12">
+                        <div className="card border-0 shadow-sm">
+                            <div className="card-body">
+                                <h5 className="fw-bold mb-3">Commandes par categorie (cout depuis mouvements)</h5>
+                                <MaterialReactTable table={stockCostTable} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Tableau disponibilite */}
+                    <div className="col-12">
+                        <div className="card border-0 shadow-sm">
+                            <div className="card-body">
+                                <h5 className="fw-bold mb-3">Disponibilite stock</h5>
+                                <MaterialReactTable table={stockTable} />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

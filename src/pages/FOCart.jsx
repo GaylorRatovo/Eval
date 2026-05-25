@@ -637,10 +637,11 @@ function FOCart() {
                                 <thead className="table-light">
                                     <tr>
                                         <th>Produit</th>
-                                        <th>Prix unitaire</th>
-                                        <th>Quantité</th>
+                                        <th>Declinaison</th>
+                                        <th>Prix unitaire(TTC)</th>
+                                        <th>Quantite</th>
                                         <th>Total</th>
-                                        <th style={{ width: "80px" }}>Actions</th>
+                                        <th style={{ width: "100px" }}>Actions</th>
                                     </tr>
                                 </thead>
 
@@ -736,26 +737,6 @@ function FOCart() {
                         </div>
                     </div>
 
-                    {/* Codes de réduction */}
-                    <div className="card border-0 mt-3" style={{ boxShadow: "0 2px 12px rgba(67, 89, 113, 0.08)" }}>
-                        <div className="card-body">
-                            <h6 className="card-title fw-bold mb-3">
-                                <i className="bx bx-tag me-2"></i>
-                                Code promo
-                            </h6>
-                            <div className="input-group input-group-sm">
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    placeholder="Entrez votre code..."
-                                    disabled
-                                />
-                                <button className="btn btn-outline-secondary" type="button" disabled>
-                                    <i className="bx bx-check"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

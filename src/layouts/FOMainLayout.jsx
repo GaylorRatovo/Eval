@@ -4,7 +4,7 @@ import { useState } from "react";
 function FOMainLayout() {
     const location = useLocation();
     const navigate = useNavigate();
-    const [searchTerm, setSearchTerm] = useState("");
+    // const [searchTerm, setSearchTerm] = useState("");
 
     const isGuest = localStorage.getItem("isGuest") === "true";
     const isLoginRoute = location.pathname === "/fo";
@@ -18,14 +18,14 @@ function FOMainLayout() {
         navigate("/fo");
     };
 
-    const handleSearchChange = (event) => {
-        const nextValue = event.target.value;
-        setSearchTerm(nextValue);
-
-        const query = nextValue.trim();
-        const target = query ? `/fo/products?q=${encodeURIComponent(query)}` : "/fo/products";
-        navigate(target, { replace: true });
-    };
+    // const handleSearchChange = (event) => {
+    //     const nextValue = event.target.value;
+    //     setSearchTerm(nextValue);
+    //
+    //     const query = nextValue.trim();
+    //     const target = query ? `/fo/products?q=${encodeURIComponent(query)}` : "/fo/products";
+    //     navigate(target, { replace: true });
+    // };
 
     return (
         <div className="layout-wrapper layout-content-navbar">
@@ -51,8 +51,8 @@ function FOMainLayout() {
                                             className="form-control border-0 shadow-none ps-2"
                                             placeholder="Rechercher un produit..."
                                             aria-label="Recherche"
-                                            value={searchTerm}
-                                            onChange={handleSearchChange}
+                                            // value={searchTerm}
+                                            // onChange={handleSearchChange}
                                         />
                                     </div>
                                 </div>

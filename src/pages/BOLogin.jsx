@@ -48,15 +48,42 @@ function BOLogin() {
 
     return (
         <div className="container-xxl">
-            <div className="row justify-content-center">
-                <div className="col-md-6 col-lg-5">
-                    <div className="card mt-5">
-                        <div className="card-body">
-                            <div className="text-center mb-4">
-                                <h4 className="mb-1">Connexion Backoffice</h4>
-                                <p className="text-muted">Acces reserve a l'equipe EvalShop</p>
+            <div className="row align-items-center min-vh-100 py-4">
+                {/* Colonne branding */}
+                <div className="col-12 col-lg-6 mb-4 mb-lg-0">
+                    <div className="pe-lg-5">
+                        <span className="badge bg-primary mb-3">BackOffice</span>
+                        <h2 className="fw-bold mb-3">EvalShop Admin Console</h2>
+                        <p className="text-body-secondary">
+                            Acces reserve a l'equipe EvalShop pour la gestion des commandes, du stock et des imports.
+                        </p>
+
+                        <div className="d-flex gap-3 mt-4">
+                            <div className="card border-0 shadow-sm p-3 flex-grow-1">
+                                <i className="bx bx-shield-quarter text-primary fs-4"></i>
+                                <p className="mb-0 mt-2 fw-semibold">Securite</p>
+                                <p className="small text-body-secondary mb-0">Acces controle</p>
                             </div>
+                            <div className="card border-0 shadow-sm p-3 flex-grow-1">
+                                <i className="bx bx-bar-chart-alt text-info fs-4"></i>
+                                <p className="mb-0 mt-2 fw-semibold">Pilotage</p>
+                                <p className="small text-body-secondary mb-0">KPI temps reel</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Colonne formulaire */}
+                <div className="col-12 col-lg-5 offset-lg-1">
+                    <div className="card border-0 shadow-sm">
+                        <div className="card-body p-4">
+                            <div className="mb-4">
+                                <h4 className="mb-1">Connexion Backoffice</h4>
+                                <p className="text-muted mb-0">Acces reserve a l'equipe EvalShop</p>
+                            </div>
+
                             <form onSubmit={handleSubmit} className="d-grid gap-3">
+                                {/* Email */}
                                 <div>
                                     <label className="form-label">Email</label>
                                     <input
@@ -67,6 +94,8 @@ function BOLogin() {
                                         onChange={(e) => setEmail(e.target.value)}
                                     />
                                 </div>
+
+                                {/* Mot de passe */}
                                 <div>
                                     <label className="form-label">Mot de passe</label>
                                     <input
@@ -77,8 +106,12 @@ function BOLogin() {
                                         onChange={(e) => setPassword(e.target.value)}
                                     />
                                 </div>
-                                <button className="btn btn-primary" type="submit">Se connecter</button>
+
+                                <button className="btn btn-primary" type="submit">
+                                    Se connecter
+                                </button>
                             </form>
+
                             <div className="text-center mt-3">
                                 <Link className="text-body" to="/fo">Aller au FrontOffice</Link>
                             </div>

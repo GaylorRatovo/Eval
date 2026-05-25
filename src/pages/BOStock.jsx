@@ -17,14 +17,39 @@ function BOStock() {
     // les produits avec détails qui sera passé entre les composants pour éviter les requêtes à chaque appel
     const [productDetails, setProductDetails] = useState([])
 
-    return <div>
-        <section>
-            <BOStockUpdate setCombination={setCombination} setProductDetails={setProductDetails}/>
-        </section>
-        <section>
-            <BOStockEvolution combination={combination} productDetails={productDetails}/>
-        </section>
-    </div>
+    return (
+        <div>
+            {/* En-tete */}
+            <div className="d-flex flex-wrap justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 className="fw-bold mb-1">Stocks</h1>
+                    <p className="text-body-secondary mb-0">Mise a jour et suivi des mouvements</p>
+                </div>
+            </div>
+
+            <div className="row g-4">
+                {/* Mise a jour du stock */}
+                <div className="col-12">
+                    <div className="card border-0 shadow-sm">
+                        <div className="card-body">
+                            <h5 className="fw-bold mb-3">Mise a jour des stocks</h5>
+                            <BOStockUpdate setCombination={setCombination} setProductDetails={setProductDetails}/>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Evolution du stock */}
+                <div className="col-12">
+                    <div className="card border-0 shadow-sm">
+                        <div className="card-body">
+                            <h5 className="fw-bold mb-3">Evolution des stocks</h5>
+                            <BOStockEvolution combination={combination} productDetails={productDetails}/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
 }
 
 export default BOStock;

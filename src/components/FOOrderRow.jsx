@@ -64,14 +64,16 @@ function OrderActionCell({ cell, table }) {
         const dateValue = isSelected ? (edit?.cartDateOrder || baseDate) : baseDate
 
         return (
-            <div>
+            <div className="d-grid gap-2">
+                {/* Date de commande pour la conversion du panier */}
                 <input
                     type="date"
                     name="cartDateOrder"
+                    className="form-control form-control-sm"
                     onChange={meta.onChangeRef?.current?.(rowId, true)}
                     value={dateValue}
                 />
-                <button type="button" onClick={() => meta.onClickRef?.current?.(rowId)}>
+                <button className="btn btn-primary btn-sm" type="button" onClick={() => meta.onClickRef?.current?.(rowId)}>
                     Commander
                 </button>
             </div>
@@ -83,20 +85,24 @@ function OrderActionCell({ cell, table }) {
     const multiplicateurValue = isSelected ? (edit?.multiplicateur ?? multiplicateur) : multiplicateur
 
     return (
-        <div>
+        <div className="d-grid gap-2">
+            {/* Multiplicateur pour duplication */}
             <input
                 type="number"
                 name="multiplicateur"
+                className="form-control form-control-sm"
                 onChange={meta.onChangeRef?.current?.(rowId, false)}
                 value={multiplicateurValue}
             />
+            {/* Date de duplication */}
             <input
                 type="date"
                 name="dateUpdate"
+                className="form-control form-control-sm"
                 onChange={meta.onChangeRef?.current?.(rowId, false)}
                 value={dateValue}
             />
-            <button type="button" onClick={() => meta.onClickRef?.current?.(rowId)}>
+            <button className="btn btn-outline-primary btn-sm" type="button" onClick={() => meta.onClickRef?.current?.(rowId)}>
                 Dupliquer la commande
             </button>
         </div>

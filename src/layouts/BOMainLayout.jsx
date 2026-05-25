@@ -12,6 +12,14 @@ function BOMainLayout() {
     const navigate = useNavigate();
     const isAuthed = localStorage.getItem("boAuth") === "true";
     const isLoginRoute = location.pathname === "/";
+    const navItems = [
+        { to: "/dashboard", label: "Dashboard", icon: "bx bx-grid-alt" },
+        { to: "/statistics", label: "Statistiques", icon: "bx bx-line-chart" },
+        { to: "/orders", label: "Commandes", icon: "bx bx-receipt" },
+        { to: "/stocks", label: "Stocks", icon: "bx bx-package" },
+        { to: "/import", label: "Import", icon: "bx bx-upload" },
+        { to: "/reset", label: "Reset", icon: "bx bx-refresh" },
+    ];
 
     /**
      * Deconnecte l'utilisateur BackOffice.
@@ -39,18 +47,52 @@ function BOMainLayout() {
     // Etape 5: afficher la barre de navigation commune aux pages BO authentifiees.
     return (
         <>
-            <nav>
-                <Link to={"/reset"}> Reset </Link>
-                <Link to={"/import"}> Import </Link>
-                <Link to={"/stocks"}>Stocks</Link>
-                <Link to={"/orders"}> Orders </Link>
-                <Link to={"/statistics"}>Statistics</Link>
-                <Link to={"/dashboard"}>Dashboard</Link>
-                <button type="button" onClick={handleLogout}>Logout</button>
+            {/* Barre de navigation principale BackOffice */}
+            <nav className="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
+                <div className="container-xxl">
+                    <Link to="/dashboard" className="navbar-brand d-flex align-items-center gap-2">
+                        <span className="badge bg-primary">BO</span>
+                        <span className="fw-bold">EvalShop</span>
+                    </Link>
+
+                    <button
+                        className="navbar-toggler"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#boNavbar"
+                        aria-controls="boNavbar"
+                        aria-expanded="false"
+                        aria-label="Toggle navigation"
+                    >
+                        <span className="navbar-toggler-icon"></span>
+                    </button>
+
+                    <div className="collapse navbar-collapse" id="boNavbar">
+                        <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+                            {navItems.map((item) => (
+                                <li key={item.to} className="nav-item">
+                                    <Link
+                                        to={item.to}
+                                        className={`nav-link ${location.pathname === item.to ? "active fw-bold" : ""}`}
+                                    >
+                                        <i className={`${item.icon} me-1`}></i>
+                                        {item.label}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+
+                        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={handleLogout}>
+                            <i className="bx bx-log-out me-1"></i>
+                            Logout
+                        </button>
+                    </div>
+                </div>
             </nav>
 
-            <main>
-                <Outlet/>
+            {/* Contenu principal BackOffice */}
+            <main className="container-xxl py-4">
+                <Outlet />
             </main>
         </>
     )

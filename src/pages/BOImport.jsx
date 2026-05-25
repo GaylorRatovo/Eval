@@ -93,60 +93,138 @@ function BOImport() {
     }
 
     return (
-        <form onSubmit={handleSubmit}>
-            <div>
-                <label>
-                    <span>Produits</span>
-                    <input
-                        type={"file"}
-                        placeholder={"Produits"}
-                        accept={".csv"}
-                        onChange={(event) => setProductFile(event.target.files?.[0] ?? null)}
-                    />
-                </label>
-                {productFile && <p>{productFile.name}</p>}
-                <label>
-                    <span>Déclinaisons & Stock initiaux</span>
-                    <input
-                        type={"file"}
-                        placeholder={"Produits"}
-                        accept={".csv"}
-                        onChange={(event) => setDeclinaisonFile(event.target.files?.[0] ?? null)}
-                    />
-                </label>
-                {declinaisonFile && <p>{declinaisonFile.name}</p>}
-                <label>
-                    <span>Clients & Commandes</span>
-                    <input
-                        type={"file"}
-                        placeholder={"Produits"}
-                        accept={".csv"}
-                        onChange={(event) => setOrdersFile(event.target.files?.[0] ?? null)}
-                    />
-                </label>
-                {ordersFile && <p>{ordersFile.name}</p>}
-                <label>
-                    <span>Images</span>
-                    <input type="checkbox"
-                        checked={doImport}
-                        onChange={(event) => setDoImport(event.target.checked)}
-                    />
-                    <input
-                        type={"file"}
-                        placeholder={"Produits"}
-                        accept={".zip"}
-                        onChange={(event) => setImageZipFile(event.target.files?.[0] ?? null)}
-                    />
-                </label>
-                {imageZipFile && <p>{imageZipFile.name}</p>}
-                <button type={"submit"} disabled={isImporting}>
-                    {isImporting ? 'Import en cours...' : 'Importer'}
-                </button>
+        <div>
+            {/* En-tete */}
+            <div className="d-flex flex-wrap justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 className="fw-bold mb-1">Import de donnees</h1>
+                    <p className="text-body-secondary mb-0">Importer produits, declinaisons, commandes et images</p>
+                </div>
             </div>
 
-            {importError && <p>{importError}</p>}
-            {importResult && <pre>{JSON.stringify(importResult, null, 2)}</pre>}
-        </form>
+            <div className="row g-4">
+                {/* Formulaire d'import */}
+                <div className="col-12 col-lg-7">
+                    <div className="card border-0 shadow-sm">
+                        <div className="card-body">
+                            {/* Indication visuelle de l'import */}
+                            {isImporting && (
+                                <div className="alert alert-info d-flex align-items-center" role="alert">
+                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    Import en cours...
+                                </div>
+                            )}
+
+                            {!isImporting && importResult && (
+                                <div className="alert alert-success" role="alert">
+                                    <i className="bx bx-check-circle me-2"></i>
+                                    Import termine avec succes.
+                                </div>
+                            )}
+
+                            {!isImporting && importError && (
+                                <div className="alert alert-danger" role="alert">
+                                    <i className="bx bx-error-circle me-2"></i>
+                                    Import echoue. Verifiez les fichiers et reessayez.
+                                </div>
+                            )}
+
+                            <form onSubmit={handleSubmit} className="d-grid gap-3">
+                                {/* Produits */}
+                                <div>
+                                    <label className="form-label fw-bold">Produits (CSV)</label>
+                                    <input
+                                        type="file"
+                                        className="form-control"
+                                        accept=".csv"
+                                        onChange={(event) => setProductFile(event.target.files?.[0] ?? null)}
+                                    />
+                                    {productFile && <p className="small text-body-secondary mt-1 mb-0">{productFile.name}</p>}
+                                </div>
+
+                                {/* Declinaisons */}
+                                <div>
+                                    <label className="form-label fw-bold">Declinaisons & Stock initiaux (CSV)</label>
+                                    <input
+                                        type="file"
+                                        className="form-control"
+                                        accept=".csv"
+                                        onChange={(event) => setDeclinaisonFile(event.target.files?.[0] ?? null)}
+                                    />
+                                    {declinaisonFile && <p className="small text-body-secondary mt-1 mb-0">{declinaisonFile.name}</p>}
+                                </div>
+
+                                {/* Commandes */}
+                                <div>
+                                    <label className="form-label fw-bold">Clients & Commandes (CSV)</label>
+                                    <input
+                                        type="file"
+                                        className="form-control"
+                                        accept=".csv"
+                                        onChange={(event) => setOrdersFile(event.target.files?.[0] ?? null)}
+                                    />
+                                    {ordersFile && <p className="small text-body-secondary mt-1 mb-0">{ordersFile.name}</p>}
+                                </div>
+
+                                {/* Images */}
+                                <div>
+                                    <label className="form-label fw-bold">Images (ZIP)</label>
+                                    <div className="form-check mb-2">
+                                        <input
+                                            className="form-check-input"
+                                            type="checkbox"
+                                            id="doImport"
+                                            checked={doImport}
+                                            onChange={(event) => setDoImport(event.target.checked)}
+                                        />
+                                        <label className="form-check-label" htmlFor="doImport">
+                                            Ne pas importer les images
+                                        </label>
+                                    </div>
+                                    <input
+                                        type="file"
+                                        className="form-control"
+                                        accept=".zip"
+                                        onChange={(event) => setImageZipFile(event.target.files?.[0] ?? null)}
+                                    />
+                                    {imageZipFile && <p className="small text-body-secondary mt-1 mb-0">{imageZipFile.name}</p>}
+                                </div>
+
+                                <button type="submit" className="btn btn-primary" disabled={isImporting}>
+                                    {isImporting ? "Import en cours..." : "Importer"}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Resultats */}
+                <div className="col-12 col-lg-5">
+                    <div className="card border-0 shadow-sm">
+                        <div className="card-body">
+                            <h5 className="fw-bold mb-3">Resultat</h5>
+
+                            {importError && (
+                                <div className="alert alert-danger" role="alert">
+                                    <i className="bx bx-error-circle me-2"></i>
+                                    {importError}
+                                </div>
+                            )}
+
+                            {!importError && !importResult && (
+                                <p className="text-body-secondary mb-0">Aucun resultat a afficher.</p>
+                            )}
+
+                            {importResult && (
+                                <pre className="bg-light p-3 rounded mb-0" style={{ maxHeight: "360px", overflow: "auto" }}>
+                                    {JSON.stringify(importResult, null, 2)}
+                                </pre>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     )
 }
 

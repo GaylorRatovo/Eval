@@ -306,15 +306,19 @@ function FOOrderList() {
                         <p className="text-body-secondary mb-0">Chargement de vos commandes...</p>
                     </div>
                 ) : orders.length > 0 ? (
-                    <FOOrderRow
-                        title="Commandes"
-                        rows={orders}
-                        edit={edit}
-                        multiplicateur={1}
-                        onChange={handleChange}
-                        onClick={handleClick}
-                        actionMode="order"
-                    />
+                    <div className="card border-0 shadow-sm">
+                        <div className="card-body">
+                            <FOOrderRow
+                                title="Commandes"
+                                rows={orders}
+                                edit={edit}
+                                multiplicateur={1}
+                                onChange={handleChange}
+                                onClick={handleClick}
+                                actionMode="order"
+                            />
+                        </div>
+                    </div>
                 ) : (
                     <div className="card border-0 text-center py-5" style={{ backgroundColor: "#f8f9fa" }}>
                         <i className="bx bx-inbox" style={{ fontSize: "48px", color: "var(--bs-body-color-rgb)" }}></i>
@@ -351,14 +355,18 @@ function FOOrderList() {
                         <p className="text-body-secondary mb-0">Chargement de vos paniers...</p>
                     </div>
                 ) : cartRows.length > 0 ? (
-                    <FOOrderRow
-                        title="Paniers"
-                        rows={cartRows}
-                        edit={edit}
-                        onChange={handleChange}
-                        onClick={handleCommanderClick}
-                        actionMode="cart"
-                    />
+                    <div className="card border-0 shadow-sm">
+                        <div className="card-body">
+                            <FOOrderRow
+                                title="Paniers"
+                                rows={cartRows}
+                                edit={edit}
+                                onChange={handleChange}
+                                onClick={handleCommanderClick}
+                                actionMode="cart"
+                            />
+                        </div>
+                    </div>
                 ) : (
                     <div className="card border-0 text-center py-5" style={{ backgroundColor: "#f8f9fa" }}>
                         <i className="bx bx-check-circle" style={{ fontSize: "48px", color: "var(--bs-success)" }}></i>

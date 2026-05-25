@@ -24,7 +24,7 @@ useEffect(() => {
 ```
 
 ## 2) Remplacer la liste affichee
-Remplace `filteredProducts.map(...)` par `pagedProducts.map(...)`.
+Remplace `filteredProducts.map(...)` par `pagedProducts.map(...)` dans la grille.
 
 Exemple:
 ```jsx
@@ -77,3 +77,4 @@ Ajoute ce bloc juste apres la grille des produits, avant l'alerte d'empty state.
 - `pageSize` controle le nombre de cartes par page.
 - Le `useEffect` remet la pagination a la page 1 quand un filtre change.
 - Le composant utilise les classes Bootstrap, donc aucun CSS additionnel n'est requis.
+- Si la page affiche un loader (isLoading), la pagination doit rester sous la grille (pas pendant le loader).

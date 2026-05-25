@@ -199,22 +199,32 @@ function FOCartRow({ row, index, onOptionChange, onQuantityChange, onDelete, for
 
     return (
         <tr>
-            <td>{row.productName || ""}</td>
-            <td>{row.productReference || ""}</td>
             <td>
-                {row.productImageURL ? (
-                    <img
-                        src={row.productImageURL}
-                        alt={row.productImageURL}
-                        width="120"
-                    />
-                ) : (
-                    "-"
-                )}
+                <div className="d-flex align-items-center gap-3">
+                    {row.productImageURL ? (
+                        <img
+                            src={row.productImageURL}
+                            alt={row.productName || "Produit"}
+                            width="64"
+                            height="64"
+                            className="rounded"
+                            style={{ objectFit: "cover" }}
+                        />
+                    ) : (
+                        <div className="bg-light rounded d-flex align-items-center justify-content-center" style={{ width: "64px", height: "64px" }}>
+                            <i className="bx bx-image text-body-secondary"></i>
+                        </div>
+                    )}
+
+                    <div>
+                        <p className="mb-1 fw-semibold">{row.productName || "Produit"}</p>
+                        <p className="mb-0 small text-body-secondary">REF: {row.productReference || "-"}</p>
+                    </div>
+                </div>
             </td>
             <td>
                 {options.length > 0 ? (
-                    <select value={selectedOptionId} onChange={handleChange}>
+                    <select className="form-select form-select-sm" value={selectedOptionId} onChange={handleChange}>
                         {options.map((value) => (
                             <option key={value.id} value={value.id}>
                                 {value.label || ""}
@@ -222,20 +232,36 @@ function FOCartRow({ row, index, onOptionChange, onQuantityChange, onDelete, for
                         ))}
                     </select>
                 ) : (
-                    "Sans declinaison"
+                    <span className="badge bg-label-secondary">Sans declinaison</span>
                 )}
             </td>
-            <td>{row.stockQuantity ?? "-"}</td>
-            <td>{formatPrice(getRowDisplayedPrice(row))}</td>
             <td>
-                <button type="button" onClick={handleDecrease}>-</button>
-                <input type="number" value={row.quantity} readOnly min={1} />
-                <button type="button" onClick={handleIncrease}>+</button>
+                <span className="fw-semibold">{formatPrice(getRowDisplayedPrice(row))} €</span>
             </td>
-            <td>{formatPrice(getRowLineTotal(row))}</td>
             <td>
-                <button type="button" onClick={() => onDelete?.(index, row?.cartRowIndex)}>
-                    Supprimer
+                <div className="d-flex align-items-center gap-2">
+                    <button className="btn btn-outline-secondary btn-sm" type="button" onClick={handleDecrease}>
+                        <i className="bx bx-minus"></i>
+                    </button>
+                    <input
+                        type="number"
+                        className="form-control form-control-sm text-center"
+                        value={row.quantity}
+                        readOnly
+                        min={1}
+                        style={{ width: "64px" }}
+                    />
+                    <button className="btn btn-outline-secondary btn-sm" type="button" onClick={handleIncrease}>
+                        <i className="bx bx-plus"></i>
+                    </button>
+                </div>
+            </td>
+            <td>
+                <span className="fw-semibold">{formatPrice(getRowLineTotal(row))} €</span>
+            </td>
+            <td>
+                <button className="btn btn-outline-danger btn-sm" type="button" onClick={() => onDelete?.(index, row?.cartRowIndex)}>
+                    <i className="bx bx-trash"></i>
                 </button>
             </td>
         </tr>

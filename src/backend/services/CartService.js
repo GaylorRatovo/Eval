@@ -409,8 +409,13 @@ const getCartTotals = (cart) => {
         const qty = Number(row?.quantity || 0);
         const baseTtc = Number(row?.baseTtcPrice || 0);
         const taxRate = Number(row?.taxRate || 0);
-        const impact = Number(row?.selectedOptionImpact || 0);
         const divisor = 1 + taxRate / 100;
+
+        // Determiner l'impact de la declinaison selectionnee.
+        const selectedId = Number(row?.selectedOptionId || 0);
+        const options = Array.isArray(row?.options) ? row.options : [];
+        const selected = options.find((value) => Number(value.id) === selectedId);
+        const impact = Number(selected?.priceImpact ?? row?.selectedOptionImpact ?? 0);
         const baseHt = divisor ? baseTtc / divisor : 0;
 
         totalHt += (baseHt + impact) * qty;
