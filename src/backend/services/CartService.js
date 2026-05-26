@@ -31,54 +31,18 @@ const buildDeliveryOption = (addressId, carrierId = DEFAULT_CARRIER_ID) => {
 
 
 
-/**
- * Vérifie si un panier est encore actif (aucune commande liée).
- *
- * Paramètres:
- * - `idCart` (number|string): identifiant du panier à vérifier.
- *
- * Retour: Promise<boolean> — `true` si aucun ordre lié (panier actif), `false` sinon.
- *
- * Règles métier:
- * - Interroge l'API `orders` pour vérifier l'absence d'une commande liée à `id_cart`.
- * - Considère le panier inactif si une commande existe pour ce panier.
- *
- * Exemple:
- * await isCartActive(12)
- * => true
- */
 const isCartActive = async (idCart) => {
     const orderApi = new Order({}, false);
-    // const xml = orderApi.getBy("id_cart",idCart);
     const xml = await api.get(`${orderApi.endpoint}?display=full&filter[id_cart]=[${idCart}]`);
     const orders = toOrderJSONList(xml);
     return orders.length === 0;
 }
 
-/**
- * Récupère le dernier panier d'un client (le plus récent) au format `Cart`.
- *
- * Paramètres:
- * - `idCustomer` (number|string): identifiant du client.
- *
- * Retour: Promise<Cart|null> — l'objet `Cart` le plus récent ou `null` si aucun panier.
- *
- * Règles métier:
- * - Trie par date (date_add/dateAdd) et retourne le plus récent.
- * - Retourne `null` si aucun panier trouvé.
- *
- * Exemple d'utilisation:
- * const cart = await getLastCartByCustomer(3)
- * // cart || null
- */
 const getLastCartByCustomer = async (idCustomer) => {
     const cartApi = new Cart({}, false);
-
-        const response = await api.get(
-            `${cartApi.endpoint}?display=full&filter[id_customer]=[${idCustomer}]`
-        );
-
-    // const response = await cartApi.getBy("id_customer", idCustomer);
+    const response = await api.get(
+        `${cartApi.endpoint}?display=full&filter[id_customer]=[${idCustomer}]`
+    );
 
     const carts = toJSONList(response);
 
@@ -98,25 +62,7 @@ const getLastCartByCustomer = async (idCustomer) => {
 };
 
 
-/**
- * Crée un nouveau panier pour un client ou renvoie le panier actif existant.
- *
- * Paramètres:
- * - `idCustomer` (number): identifiant du client.
- * - `date` (Date|string): date de création (par défaut now).
- * - `initialRows` (Array): lignes initiales à pré-remplir dans le panier.
- *
- * Retour: Promise<{cart: Cart, isNew: boolean}> — le panier et un flag indiquant s'il a été créé.
- *
- * Règles métier:
- * - Si un panier actif existe, le retourne sans créer.
- * - Si le client n'a pas d'adresse, lance une erreur.
- * - Initialise les `deliveryOption` et valeurs PrestaShop standards.
- *
- * Exemple:
- * await createOrUpdateCart(5, new Date(), [{ productId: 1, quantity: 2 }])
- */
-const createOrUpdateCart  = async (idCustomer, date = new Date(), initialRows = []) => {    
+const createOrUpdateCart  = async (idCustomer, date = new Date(), initialRows = [], forceNewCart = false) => {    
 
     const dateUsed = ensureLocalDateTime(date)
 
@@ -126,7 +72,7 @@ const createOrUpdateCart  = async (idCustomer, date = new Date(), initialRows = 
     const address = await customer.getAddress();
     
     const customerCart = await getLastCartByCustomer(idCustomer);
-    if (customerCart && await isCartActive(customerCart.id)) {
+    if (!forceNewCart && customerCart && await isCartActive(customerCart.id)) {
         return { cart: customerCart, isNew: false };
     }
 
@@ -169,22 +115,6 @@ const createOrUpdateCart  = async (idCustomer, date = new Date(), initialRows = 
 
 }
 
-/**
- * Supprime une ligne du panier et persiste le changement.
- *
- * Paramètres:
- * - `cart` (Cart): instance du panier.
- * - `rowIndex` (number): index de la ligne à supprimer.
- *
- * Retour: Promise<Cart|null> — panier mis à jour ou `null` si le panier devient vide.
- *
- * Règles métier:
- * - Si l'index est invalide, renvoie le panier inchangé.
- * - Si après suppression le panier est vide, supprime le panier via `cart.delete()`.
- *
- * Exemple:
- * const next = await deleteItems(cart, 0)
- */
 const deleteItems = async (cart, rowIndex) => {
     const rows = cart?.cartRows ?? [];
     const index = Number(rowIndex);
@@ -203,26 +133,7 @@ const deleteItems = async (cart, rowIndex) => {
     return cart;
 }
 
-/**
- * Ajoute un produit (avec éventuelle déclinaison) au panier d'un client.
- *
- * Paramètres:
- * - `idCustomer` (number): identifiant du client.
- * - `idProduct` (number): identifiant du produit.
- * - `idProductAttribute` (number): identifiant de la déclinaison (0 si aucune).
- * - `quantity` (number): quantité souhaitée.
- * - `multiplicateur` (number): facteur multiplicatif appliqué à la quantité.
- *
- * Retour: Promise<Cart> — le panier mis à jour.
- *
- * Règles métier:
- * - La quantité est tronquée à un entier >= 1 et multipliée par `multiplicateur`.
- * - Si aucun panier actif, crée un panier via `createOrUpdateCart`.
- *
- * Exemple:
- * await addProductToCart(3, 12, 0, 2)
- */
-const addProductToCart = async (idCustomer, idProduct, idProductAttribute, quantity, multiplicateur = 1) => {
+const addProductToCart = async (idCustomer, idProduct, idProductAttribute, quantity, multiplicateur = 1, forceNewCart = false, date = new Date()) => {
     const factor = Number(multiplicateur) || 1;
     const safeQty = Math.max(1, Math.trunc((Number(quantity) || 0) * factor));
 
@@ -233,7 +144,7 @@ const addProductToCart = async (idCustomer, idProduct, idProductAttribute, quant
         addressDeliveryId: 0,
     };
 
-    const { cart, isNew } = await createOrUpdateCart(idCustomer, new Date(), [cartRow]);
+    const { cart, isNew } = await createOrUpdateCart(idCustomer, date, [cartRow], forceNewCart);
     if (isNew) {
         return cart;
     }
@@ -244,37 +155,17 @@ const addProductToCart = async (idCustomer, idProduct, idProductAttribute, quant
     return cart;
 }
 
-/**
- * Duplique un panier en réinjectant ses lignes (utile pour tests/duplication).
- *
- * Paramètres:
- * - `cart` (Cart): panier source.
- * - `multiplicateur` (number): facteur appliqué aux quantités.
- * - `dateUpdate` (Date|string): date associée (non utilisée ici pour la création).
- *
- * Retour: Promise<void> — résout quand l'opération est terminée.
- *
- * Règles métier:
- * - Pour chaque ligne, appelle `addProductToCart` en multipliant la quantité.
- */
 const duplicateCart = async(cart, multiplicateur, dateUpdate) => {
-    for (const row of cart.cartRows) {
+    let duplicatedCart = null
+
+    for (const [index, row] of cart.cartRows.entries()) {
         row.quantity = Number(row.quantity) * multiplicateur
-        await addProductToCart(cart.customerId, row.productId, row.productAttributeId, row.quantity);
-    }   
+        duplicatedCart = await addProductToCart(cart.customerId, row.productId, row.productAttributeId, row.quantity, 1, index === 0, dateUpdate)
+    }
+
+    return duplicatedCart
 }
 
-/**
- * Récupère l'entité `Product` associée à une ligne de panier.
- *
- * Paramètres:
- * - `cartRow` (object): ligne du panier contenant `productId`.
- *
- * Retour: Promise<Product|null> — instance `Product` ou `null` si introuvable.
- *
- * Exemple:
- * const product = await getProductForRow({ productId: 12 })
- */
 const getProductForRow = async (cartRow) => {
     if (!cartRow) {
         return null;
@@ -289,34 +180,12 @@ const getProductForRow = async (cartRow) => {
     return await productApi.getById(productId);
 }
 
-/**
- * Récupère la quantité disponible pour un produit / attribut.
- *
- * Paramètres:
- * - `productId` (number): id du produit.
- * - `productAttributeId` (number): id de la déclinaison (0 si non renseigné).
- *
- * Retour: Promise<number> — quantité disponible (>=0).
- */
 const getStockForProductAttribute = async (productId, productAttributeId = 0) => {
     const stockApi = new StockAvailable({}, false);
     const stock = await stockApi.getByProductAndAttribute(productId, productAttributeId);
     return Number(stock?.quantity ?? 0);
 }
 
-/**
- * Enrichit une ligne de panier avec détails produit, image, déclinaison et stock.
- *
- * Paramètres:
- * - `cartRow` (object): ligne du panier ({ productId, productAttributeId, quantity, ... }).
- *
- * Retour: Promise<object|null> — objet enrichi ou `null` si produit introuvable.
- *
- * Exemple de sortie:
- * {
- *   product, productImageURL, declinaison, priceTtc, stockQuantity, quantity
- * }
- */
 const getCartRowDetails = async (cartRow) => {
     if (!cartRow) {
         return null;
@@ -347,20 +216,6 @@ const getCartRowDetails = async (cartRow) => {
     };
 }
 
-/**
- * Met à jour un panier pour l'associer à un client et une adresse.
- *
- * Paramètres:
- * - `cart` (Cart): panier à mettre à jour.
- * - `customer` (Customer): client cible.
- * - `address` (Address): adresse de livraison/facturation.
- *
- * Retour: Promise<Cart> — panier mis à jour.
- *
- * Règles métier:
- * - Vérifie la présence de `cart.id`, `customer.id` et `address.id`.
- * - Met `idGuest` à 0 et met à jour `deliveryOption`.
- */
 const updateCartForCustomer = async (cart, customer, address) => {
     if (!cart?.id) {
         throw new Error("Cart not found");
@@ -388,18 +243,6 @@ const updateCartForCustomer = async (cart, customer, address) => {
     return await cart.update();
 }
 
-/**
- * Calcule les totaux HT et TTC d'un panier à partir de ses lignes.
- *
- * Paramètres:
- * - `cart` (Cart|object): panier contenant `cartRows`.
- *
- * Retour: { totalHt: number, totalTtc: number }
- *
- * Règles métier:
- * - Pour chaque ligne, calcule le prix TTC affiché en tenant compte de l'impact
- *   de l'option sélectionnée et du taux de taxe. Agrège par quantité.
- */
 const getCartTotals = (cart) => {
     const rows = cart?.cartRows ?? [];
     let totalHt = 0;
@@ -409,13 +252,10 @@ const getCartTotals = (cart) => {
         const qty = Number(row?.quantity || 0);
         const baseTtc = Number(row?.baseTtcPrice || 0);
         const taxRate = Number(row?.taxRate || 0);
+        const selectedOptionId = Number(row?.selectedOptionId || 0);
+        const selectedOption = (row?.options || []).find((option) => Number(option.id) === selectedOptionId) || null;
+        const impact = Number(row?.selectedOptionImpact ?? selectedOption?.priceImpact ?? 0);
         const divisor = 1 + taxRate / 100;
-
-        // Determiner l'impact de la declinaison selectionnee.
-        const selectedId = Number(row?.selectedOptionId || 0);
-        const options = Array.isArray(row?.options) ? row.options : [];
-        const selected = options.find((value) => Number(value.id) === selectedId);
-        const impact = Number(selected?.priceImpact ?? row?.selectedOptionImpact ?? 0);
         const baseHt = divisor ? baseTtc / divisor : 0;
 
         totalHt += (baseHt + impact) * qty;
@@ -425,11 +265,6 @@ const getCartTotals = (cart) => {
     return { totalHt, totalTtc };
 }
 
-/**
- * Récupère les paniers qui ne sont associés à aucune commande.
- *
- * Retour: Promise<Array<Cart>> — liste de paniers sans commande.
- */
 const getCartsWithoutOrder = async () => {
     const orderApi = new Order({}, false);
     const cartApi = new Cart({}, false);
@@ -443,27 +278,11 @@ const getCartsWithoutOrder = async () => {
     return await cartApi.getExclApi(cartIds);
 }
 
-/**
- * Filtre les paniers sans commande par client.
- *
- * Paramètres:
- * - `customerId` (number): identifiant du client.
- *
- * Retour: Promise<Array<Cart>> — paniers du client sans commande.
- */
 const getCartWithoutOrderByCustomer = async (customerId) => {
     const cartsWithoutOrder = await getCartsWithoutOrder();
     return (cartsWithoutOrder || []).filter(cart => Number(cart?.customerId) === Number(customerId));
 }
 
-/**
- * Enrichit une liste de paniers via `CartWithDetails.enrich()`.
- *
- * Paramètres:
- * - `carts` (Array): liste de paniers bruts.
- *
- * Retour: Promise<Array> — paniers enrichis (silencieusement ignore les erreurs par ligne).
- */
 const enrichCarts = async (carts = []) => {
     const detailed = [];
     for (const cart of carts ?? []) {
