@@ -31,7 +31,7 @@ export async function removeStockByCategory(categoryId , quantityRemove) {
 
             const toRemove = Math.min(actual , Number(quantityRemove));
 
-            console.log("toRemove:"+toRemove);
+            console.log("toRemove : "+toRemove);
 
 
             if(haveDeclinaison && productStock.idProductAttribute === 0) continue
@@ -54,12 +54,12 @@ export async function removeStockByCategory(categoryId , quantityRemove) {
             }
 
             tokonyHiala = tokonyHiala + Number(quantityRemove);
-            tenaNiala = tenaNiala + Math.min(Number(stock.quantity) , Number(quantityRemove));
+            tenaNiala = tenaNiala + toRemove;
         }
     }
 
     console.log("4");
-    console.log("tokony hiala :"+tokonyHiala);
-    console.log("tena niala :"+tenaNiala);
+    console.log("tokony hiala : "+tokonyHiala);
+    console.log("tena niala : "+tenaNiala);
     return {tokonyHiala , tenaNiala}
 }
