@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link,useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import Product from "../backend/entities/Product.js";
 import Category from "../backend/entities/Category.js";
@@ -219,6 +219,10 @@ function FOProductList() {
                         : `${filteredProducts.length} produits disponibles`}
                 </p>
             </div>
+
+            <Link to="/fo/removeStock">
+                Retirer Stock
+            </Link>
 
             {/* Barre de filtres horizontale */}
             <div className="card mb-4" style={{ border: "none", boxShadow: "0 2px 4px rgba(67, 89, 113, 0.08)" }}>

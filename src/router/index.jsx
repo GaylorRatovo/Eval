@@ -13,6 +13,7 @@ import BOStock from "../pages/BOStock.jsx";
 import BOLogin from "../pages/BOLogin.jsx";
 import FOCart from "../pages/FOCart.jsx";
 import NotFoundPage from "../pages/NotFoundPage.jsx";
+import FORemoveStock from "../pages/FORemoveStock.jsx";
 
 import BOStatistic from "../pages/BOStatistic.jsx";
 import BODashboard from "../pages/BODashboard.jsx";
@@ -61,6 +62,10 @@ export const router = createBrowserRouter([
             {
                 index: true,
                 element: <FOUserList/>
+            },
+            {
+                path: "removeStock",
+                element: <FORemoveStock/>
             },
             {
                 path: "products",
