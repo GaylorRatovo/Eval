@@ -49,7 +49,6 @@ const buildDeliveryOption = (addressId, carrierId = DEFAULT_CARRIER_ID) => {
  */
 const isCartActive = async (idCart) => {
     const orderApi = new Order({}, false);
-    // const xml = orderApi.getBy("id_cart",idCart);
     const xml = await api.get(`${orderApi.endpoint}?display=full&filter[id_cart]=[${idCart}]`);
     const orders = toOrderJSONList(xml);
     return orders.length === 0;
@@ -73,12 +72,9 @@ const isCartActive = async (idCart) => {
  */
 const getLastCartByCustomer = async (idCustomer) => {
     const cartApi = new Cart({}, false);
-
-        const response = await api.get(
-            `${cartApi.endpoint}?display=full&filter[id_customer]=[${idCustomer}]`
-        );
-
-    // const response = await cartApi.getBy("id_customer", idCustomer);
+    const response = await api.get(
+        `${cartApi.endpoint}?display=full&filter[id_customer]=[${idCustomer}]`
+    );
 
     const carts = toJSONList(response);
 
@@ -116,7 +112,7 @@ const getLastCartByCustomer = async (idCustomer) => {
  * Exemple:
  * await createOrUpdateCart(5, new Date(), [{ productId: 1, quantity: 2 }])
  */
-const createOrUpdateCart  = async (idCustomer, date = new Date(), initialRows = []) => {    
+const createOrUpdateCart  = async (idCustomer, date = new Date(), initialRows = [], forceNewCart = false) => {    
 
     const dateUsed = ensureLocalDateTime(date)
 
@@ -126,7 +122,7 @@ const createOrUpdateCart  = async (idCustomer, date = new Date(), initialRows = 
     const address = await customer.getAddress();
     
     const customerCart = await getLastCartByCustomer(idCustomer);
-    if (customerCart && await isCartActive(customerCart.id)) {
+    if (!forceNewCart && customerCart && await isCartActive(customerCart.id)) {
         return { cart: customerCart, isNew: false };
     }
 
@@ -222,7 +218,7 @@ const deleteItems = async (cart, rowIndex) => {
  * Exemple:
  * await addProductToCart(3, 12, 0, 2)
  */
-const addProductToCart = async (idCustomer, idProduct, idProductAttribute, quantity, multiplicateur = 1) => {
+const addProductToCart = async (idCustomer, idProduct, idProductAttribute, quantity, multiplicateur = 1, forceNewCart = false, date = new Date()) => {
     const factor = Number(multiplicateur) || 1;
     const safeQty = Math.max(1, Math.trunc((Number(quantity) || 0) * factor));
 
@@ -233,7 +229,7 @@ const addProductToCart = async (idCustomer, idProduct, idProductAttribute, quant
         addressDeliveryId: 0,
     };
 
-    const { cart, isNew } = await createOrUpdateCart(idCustomer, new Date(), [cartRow]);
+    const { cart, isNew } = await createOrUpdateCart(idCustomer, date, [cartRow], forceNewCart);
     if (isNew) {
         return cart;
     }
@@ -260,17 +256,14 @@ const addProductToCart = async (idCustomer, idProduct, idProductAttribute, quant
  * - OPTIMISATION: Utilise Promise.all() pour paralléliser au lieu de boucle séquentielle.
  */
 const duplicateCart = async(cart, multiplicateur, dateUpdate) => {
-    // OPTIMISATION: Paralléliser tous les ajouts au lieu de sequential await
-    await Promise.all(
-        (cart.cartRows || []).map(row => 
-            addProductToCart(
-                cart.customerId, 
-                row.productId, 
-                row.productAttributeId, 
-                Number(row.quantity) * multiplicateur
-            )
-        )
-    )
+    let duplicatedCart = null
+
+    for (const [index, row] of cart.cartRows.entries()) {
+        row.quantity = Number(row.quantity) * multiplicateur
+        duplicatedCart = await addProductToCart(cart.customerId, row.productId, row.productAttributeId, row.quantity, 1, index === 0, dateUpdate)
+    }
+
+    return duplicatedCart
 }
 
 /**
@@ -337,15 +330,14 @@ const getCartRowDetails = async (cartRow) => {
     }
 
     const attributeId = Number(cartRow.productAttributeId || 0);
-    
-    // OPTIMISATION: Paralléliser les 3 requêtes indépendantes
-    const [declinaisonDetails, stockQuantity, images] = await Promise.all([
-        product.getDeclinaisonDetails(attributeId),
-        getStockForProductAttribute(product.id, attributeId),
-        product.getImages()
-    ]);
+    const declinaisonDetails = await product.getDeclinaisonDetails(attributeId);
+    const stockQuantity = await getStockForProductAttribute(product.id, attributeId);
 
-    const productImageURL = declinaisonDetails.imageUrl || images[0] || "";
+    let productImageURL = declinaisonDetails.imageUrl;
+    if (!productImageURL) {
+        const images = await product.getImages();
+        productImageURL = images[0] || "";
+    }
 
     return {
         product,
@@ -419,13 +411,10 @@ const getCartTotals = (cart) => {
         const qty = Number(row?.quantity || 0);
         const baseTtc = Number(row?.baseTtcPrice || 0);
         const taxRate = Number(row?.taxRate || 0);
+        const selectedOptionId = Number(row?.selectedOptionId || 0);
+        const selectedOption = (row?.options || []).find((option) => Number(option.id) === selectedOptionId) || null;
+        const impact = Number(row?.selectedOptionImpact ?? selectedOption?.priceImpact ?? 0);
         const divisor = 1 + taxRate / 100;
-
-        // Determiner l'impact de la declinaison selectionnee.
-        const selectedId = Number(row?.selectedOptionId || 0);
-        const options = Array.isArray(row?.options) ? row.options : [];
-        const selected = options.find((value) => Number(value.id) === selectedId);
-        const impact = Number(selected?.priceImpact ?? row?.selectedOptionImpact ?? 0);
         const baseHt = divisor ? baseTtc / divisor : 0;
 
         totalHt += (baseHt + impact) * qty;
